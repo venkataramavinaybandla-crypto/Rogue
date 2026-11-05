@@ -1,0 +1,470 @@
+part:
+  id: co2-03
+  co: CO-2
+  title: DNS Resolution and Web Page Load Analysis
+  order: 3
+  concept_ids:
+  - co2-dns-resolution
+  - co2-dns-diagnosis
+  - co2-dns-caching-ttl
+  - co2-web-page-load-analysis
+concepts:
+- id: co2-dns-resolution
+  code: CN-CO2.3.1
+  title: DNS resolution
+  session: 6
+  skilling_exp: 6
+  btl: 2
+  difficulty: 1
+  prereqs: []
+  eli5: DNS translates a domain name into records that help a client find a service.
+  key_points:
+  - A resolver obtains DNS records for a queried name and type.
+  - A recursive resolver may use cached data or contact authoritative servers.
+  - A and AAAA records provide IPv4 and IPv6 addresses.
+  - DNS lookup is a dependency that can contribute to page-load delay.
+  - A DNS response contains records and a TTL that limits cache lifetime.
+  deep_dive: 'Domain Name System resolution maps names to resource records used by applications. A client
+    commonly asks a configured recursive resolver, which can answer from cache or perform queries through
+    the DNS hierarchy to obtain an authoritative answer. A and AAAA records provide IPv4 and IPv6 addresses
+    respectively. Other record types can support aliases and service discovery, but the course focus here
+    is name resolution and its effect on web access. Resolution is not equivalent to establishing a TCP
+    connection: it supplies information that the client can use in a later connection step. A cached answer
+    can reduce repeated lookup work, while an expired or missing cache entry may require additional network
+    exchanges. DNS diagnosis therefore examines the query name, record type, response status, answer records,
+    TTL and timing. DNS supplies name-to-record information; it does not itself establish the application''s
+    TCP connection.'
+  formulas: []
+  viz:
+    type: timeline
+    description: Explore a simplified DNS lookup delay.
+    params:
+    - name: dns_rtt_ms
+      label: DNS exchange RTT
+      min: 1
+      max: 1000
+      step: 1
+      default: 30
+      unit: ms
+    - name: exchanges
+      label: Sequential exchanges
+      min: 1
+      max: 8
+      step: 1
+      default: 2
+      unit: count
+    compute:
+      lookup_ms: dns_rtt_ms * exchanges
+    outcomes:
+    - when: lookup_ms <= 50
+      title: Fast illustrative lookup
+      explain: The assumed sequential DNS exchange delay is at most 50 ms.
+      severity: info
+    - when: lookup_ms > 50 && lookup_ms <= 200
+      title: Noticeable lookup delay
+      explain: DNS contributes a measurable wait before connection setup.
+      severity: warn
+    - when: lookup_ms > 200
+      title: Slow lookup path
+      explain: The assumed DNS exchange sequence adds substantial delay.
+      severity: fail
+    combos_to_try:
+    - set:
+        dns_rtt_ms: 10
+        exchanges: 2
+      lesson: A short recursive lookup path.
+    - set:
+        dns_rtt_ms: 40
+        exchanges: 3
+      lesson: Multiple exchanges add up.
+    - set:
+        dns_rtt_ms: 100
+        exchanges: 4
+      lesson: Investigate resolver path, caching and network delay.
+  common_mistakes:
+  - Confusing DNS resolution with TCP connection establishment.
+  - Assuming every query reaches an authoritative server.
+  - Ignoring record type and response status.
+  quiz:
+  - q: 'What does an A record contain? '
+    options:
+    - IPv4 address
+    - IPv6 address
+    - TCP port
+    - TLS certificate
+    answer: 0
+    why: An A record maps a name to an IPv4 address.
+  - q: 'What does a recursive resolver commonly do? '
+    options:
+    - Only render HTML
+    - Answer from cache or query DNS servers
+    - Open the HTTP body
+    - Perform TCP congestion control
+    answer: 1
+    why: A recursive resolver can use cached data or perform the lookup.
+  - q: 'Does DNS resolution itself create a TCP application connection? '
+    options:
+    - 'Yes'
+    - 'No'
+    - Only for HTTP/1.1
+    - Only when TTL is zero
+    answer: 1
+    why: DNS returns records; the application then uses an address to connect.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Use a DNS lookup tool or packet trace to record query type, response, answer and elapsed
+    time.
+- id: co2-dns-diagnosis
+  code: CN-CO2.3.2
+  title: DNS diagnosis and response interpretation
+  session: 6
+  skilling_exp: 6
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co2-dns-resolution
+  eli5: DNS diagnosis means identifying whether a name lookup succeeded, failed or returned unexpected
+    data.
+  key_points:
+  - Inspect the queried name and record type.
+  - Check response status and answer section.
+  - Compare returned addresses with the expected service endpoint.
+  - Use TTL to understand whether a result may be cached.
+  - Separate DNS failure from later connection or HTTP failure.
+  deep_dive: 'A useful DNS diagnosis begins with the exact question: which name and record type did the
+    client ask for? The response code indicates whether the query succeeded or encountered a condition
+    such as a missing name or server problem. The answer section contains the returned resource records,
+    which should be checked against the expected service. A response can be syntactically successful yet
+    still be operationally unexpected, for example if it returns an address that is not the intended endpoint.
+    TTL indicates how long a record may remain in a cache, so two clients can temporarily observe different
+    answers during an update. Diagnosis should keep DNS separate from later stages: a correct address
+    does not guarantee that a TCP connection succeeds, and a successful connection does not guarantee
+    a valid HTTP response. This layered approach prevents misattributing every website failure to DNS.
+    Check the query, response code, answer and TTL before diagnosing a later transport or HTTP problem.'
+  formulas: []
+  viz:
+    type: custom
+    description: Vary whether the resolver returns an expected answer.
+    params:
+    - name: answer_matches
+      label: Answer matches expected endpoint
+      min: 0
+      max: 1
+      step: 1
+      default: 1
+      unit: 0=no, 1=yes
+    - name: response_ok
+      label: DNS response successful
+      min: 0
+      max: 1
+      step: 1
+      default: 1
+      unit: 0=no, 1=yes
+    compute:
+      diagnosis_code: response_ok * answer_matches
+    outcomes:
+    - when: response_ok == 0
+      title: DNS query failed
+      explain: The resolver did not return a successful response.
+      severity: fail
+    - when: response_ok == 1 && answer_matches == 0
+      title: Unexpected DNS answer
+      explain: The query succeeded but the returned endpoint does not match expectation.
+      severity: warn
+    - when: response_ok == 1 && answer_matches == 1
+      title: Expected DNS answer
+      explain: The response succeeded and matches the expected endpoint.
+      severity: info
+    combos_to_try:
+    - set:
+        response_ok: 0
+        answer_matches: 0
+      lesson: Investigate resolver reachability and response status.
+    - set:
+        response_ok: 1
+        answer_matches: 0
+      lesson: Inspect records, caching and service configuration.
+    - set:
+        response_ok: 1
+        answer_matches: 1
+      lesson: Proceed to test the transport connection.
+  common_mistakes:
+  - Treating any successful DNS response as the correct service endpoint.
+  - Ignoring TTL when comparing results over time.
+  - Blaming DNS when the later TCP or HTTP stage fails.
+  quiz:
+  - q: 'Which DNS response detail helps explain cache lifetime? '
+    options:
+    - TTL
+    - TCP window
+    - HTTP status
+    - RTO
+    answer: 0
+    why: TTL indicates the record's cache lifetime.
+  - q: 'A DNS query succeeds but returns an unexpected IP. What is the best diagnosis? '
+    options:
+    - DNS is necessarily correct
+    - The answer is unexpected and needs investigation
+    - TCP is broken
+    - HTTP framing failed
+    answer: 1
+    why: A successful response can still contain an unexpected answer.
+  - q: 'What should be tested after a correct address is resolved? '
+    options:
+    - The transport connection
+    - The DNS TTL only
+    - The source-code indentation
+    - The HTTP body before connecting
+    answer: 0
+    why: The client must still establish the transport connection.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Capture a DNS query and write a short diagnosis that separates DNS evidence from TCP and
+    HTTP evidence.
+- id: co2-dns-caching-ttl
+  code: CN-CO2.3.3
+  title: DNS caching and TTL
+  session: 6
+  skilling_exp: 6
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co2-dns-resolution
+  eli5: DNS caching reuses records temporarily, and TTL indicates how long a record can be retained.
+  key_points:
+  - A cache can avoid repeating an upstream DNS lookup.
+  - TTL is expressed in seconds in DNS resource records.
+  - A cached record should not be treated as permanently valid.
+  - Different resolvers may have different cache states.
+  - TTL affects how quickly DNS changes are observed by clients.
+  deep_dive: 'DNS caching reduces repeated lookup work by retaining resource records for a limited period.
+    The TTL field is a time value, conventionally expressed in seconds, that tells a cache how long the
+    record may be retained. A resolver can answer a later query from its cache while the record remains
+    valid, reducing lookup traffic and latency. When the TTL expires, the resolver may need to obtain
+    fresh information. This means DNS changes are not necessarily visible to all clients at the same instant:
+    caches can expire at different times, and resolvers may have different query histories. A low TTL
+    can make changes propagate through caches sooner but may increase query frequency; a high TTL can
+    improve cache reuse while delaying observation of changes. TTL is therefore a trade-off, not a guarantee
+    of instantaneous global update. TTL controls cache lifetime, not the exact time every client will
+    observe a DNS change.'
+  formulas: []
+  viz:
+    type: timeline
+    description: Estimate the remaining cache lifetime.
+    params:
+    - name: ttl_seconds
+      label: Original TTL
+      min: 1
+      max: 86400
+      step: 1
+      default: 300
+      unit: seconds
+    - name: age_seconds
+      label: Record age
+      min: 0
+      max: 86400
+      step: 1
+      default: 120
+      unit: seconds
+    compute:
+      remaining_seconds: max(0, ttl_seconds - age_seconds)
+    outcomes:
+    - when: age_seconds < ttl_seconds * 0.5
+      title: Fresh cache entry
+      explain: Less than half of the configured TTL has elapsed.
+      severity: info
+    - when: age_seconds >= ttl_seconds * 0.5 && age_seconds < ttl_seconds
+      title: Near expiry
+      explain: The cache entry is valid in this simplified model but approaching expiry.
+      severity: warn
+    - when: age_seconds >= ttl_seconds
+      title: TTL expired
+      explain: The record should no longer be used from this cache entry.
+      severity: fail
+    combos_to_try:
+    - set:
+        ttl_seconds: 600
+        age_seconds: 60
+      lesson: Most of the TTL remains.
+    - set:
+        ttl_seconds: 600
+        age_seconds: 500
+      lesson: The entry is near expiry.
+    - set:
+        ttl_seconds: 300
+        age_seconds: 400
+      lesson: The TTL has expired.
+  common_mistakes:
+  - Treating TTL as a guaranteed global propagation timer.
+  - Assuming every resolver has the same cache entry.
+  - Forgetting that TTL is measured in seconds.
+  quiz:
+  - q: 'What is the usual unit of DNS TTL? '
+    options:
+    - Seconds
+    - Bytes
+    - Milliseconds only
+    - Packets
+    answer: 0
+    why: DNS TTL is expressed in seconds.
+  - q: 'What does an unexpired cache entry allow? '
+    options:
+    - Reuse of the cached record
+    - Permanent validity
+    - Guaranteed connection success
+    - Skipping HTTP parsing
+    answer: 0
+    why: A resolver may answer from a valid cached record.
+  - q: 'Does lowering TTL reduce caching? '
+    options:
+    - Yes, generally
+    - No, it makes records permanent
+    - It changes TCP sequence numbers
+    - It disables DNS
+    answer: 0
+    why: A lower TTL shortens the permitted cache lifetime.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Compare two TTL settings and explain the trade-off between cache reuse and how quickly clients
+    observe changes.
+- id: co2-web-page-load-analysis
+  code: CN-CO2.3.4
+  title: Web page load analysis and DNS-based load balancing
+  session: 6
+  skilling_exp: 6
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co2-dns-resolution
+  - co2-dns-caching-ttl
+  eli5: Page-load analysis follows the chain from name lookup to connection, request, response and content
+    transfer.
+  key_points:
+  - A page load can depend on DNS, transport setup, application exchanges and content transfer.
+  - Measure each stage separately where possible.
+  - DNS-based load balancing can return different service addresses to different queries.
+  - Caching can affect how quickly a changed DNS answer is observed.
+  - A returned address is one input to endpoint selection, not proof of service health.
+  deep_dive: Web page load analysis decomposes a user-visible delay into stages instead of assigning the
+    entire duration to one protocol. A simplified sequence includes DNS resolution, transport connection
+    establishment, any security negotiation, HTTP request–response exchanges and content transfer. Each
+    stage can contribute delay, and some stages may overlap depending on the implementation. DNS-based
+    load balancing uses DNS answers to distribute clients across service addresses or locations. The resolver
+    or authoritative DNS policy may return different records based on configured selection rules, but
+    caching means a client may continue using a previous answer until its cache lifetime ends. DNS-based
+    distribution also does not, by itself, prove that a returned endpoint is healthy or that the application
+    will respond quickly. The experiment should connect DNS observations with the subsequent connection
+    and page-load measurements. Measure the stages independently; DNS-based load balancing selects addresses
+    but does not guarantee endpoint health.
+  formulas: []
+  viz:
+    type: bar_compare
+    description: Compare the illustrative components of a page-load path.
+    params:
+    - name: dns_ms
+      label: DNS time
+      min: 0
+      max: 1000
+      step: 1
+      default: 40
+      unit: ms
+    - name: connect_ms
+      label: Connection time
+      min: 0
+      max: 1000
+      step: 1
+      default: 60
+      unit: ms
+    - name: http_ms
+      label: HTTP exchange time
+      min: 0
+      max: 2000
+      step: 1
+      default: 120
+      unit: ms
+    - name: transfer_ms
+      label: Transfer time
+      min: 0
+      max: 5000
+      step: 1
+      default: 300
+      unit: ms
+    compute:
+      total_ms: dns_ms + connect_ms + http_ms + transfer_ms
+    outcomes:
+    - when: total_ms <= 300
+      title: Short illustrative path
+      explain: The selected stage durations sum to at most 300 ms.
+      severity: info
+    - when: total_ms > 300 && total_ms <= 1500
+      title: Moderate page-load path
+      explain: The combined stages contribute a noticeable delay.
+      severity: warn
+    - when: total_ms > 1500
+      title: Long page-load path
+      explain: The selected stage durations sum to more than 1.5 seconds.
+      severity: fail
+    combos_to_try:
+    - set:
+        dns_ms: 20
+        connect_ms: 30
+        http_ms: 50
+        transfer_ms: 100
+      lesson: A short path with modest stage costs.
+    - set:
+        dns_ms: 100
+        connect_ms: 150
+        http_ms: 300
+        transfer_ms: 500
+      lesson: Compare the dominant stage rather than guessing.
+    - set:
+        dns_ms: 300
+        connect_ms: 400
+        http_ms: 600
+        transfer_ms: 1500
+      lesson: Transfer and network setup both contribute substantially.
+  common_mistakes:
+  - Attributing all page-load delay to DNS.
+  - Assuming different DNS answers instantly reach all clients.
+  - Assuming DNS load balancing checks application health automatically.
+  quiz:
+  - q: 'Which is a sensible way to analyze page-load delay? '
+    options:
+    - Measure DNS, connection, HTTP and transfer stages
+    - Assume DNS is always responsible
+    - Measure only the HTML file size
+    - Ignore connection setup
+    answer: 0
+    why: Stage-by-stage measurement helps locate the source of delay.
+  - q: 'What can DNS-based load balancing vary? '
+    options:
+    - Returned service addresses
+    - TCP sequence numbers
+    - HTTP status syntax
+    - TLS cipher bits
+    answer: 0
+    why: DNS policy can return different service addresses.
+  - q: 'Does a DNS answer guarantee that the endpoint is healthy? '
+    options:
+    - 'Yes'
+    - 'No'
+    - Only with a low TTL
+    - Only for UDP
+    answer: 1
+    why: Address selection does not prove application health.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Collect a DNS lookup time and a subsequent connection/page-load time; identify the largest
+    measured stage.

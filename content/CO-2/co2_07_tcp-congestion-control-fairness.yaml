@@ -1,0 +1,469 @@
+part:
+  id: co2-07
+  co: CO-2
+  title: TCP Congestion Control, Fairness and Buffering
+  order: 7
+  concept_ids:
+  - co2-tcp-slow-start
+  - co2-aimd-congestion-control
+  - co2-fast-recovery
+  - co2-mathis-relation-fairness
+concepts:
+- id: co2-tcp-slow-start
+  code: CN-CO2.7.1
+  title: TCP slow start
+  session: 8
+  skilling_exp: 11
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co2-tcp-retransmission-timers
+  eli5: Slow start grows the congestion window rapidly while probing the available network capacity.
+  key_points:
+  - The congestion window limits outstanding data in flight.
+  - Slow start increases cwnd as acknowledgements arrive.
+  - Growth is approximately exponential per RTT during slow start.
+  - A slow-start threshold determines when congestion avoidance begins.
+  - Loss signals can reduce the sender's congestion window.
+  deep_dive: TCP slow start is an initial congestion-control phase that probes available network capacity.
+    The congestion window, cwnd, limits how much unacknowledged data the sender may have in flight, subject
+    also to the receiver's advertised window. During slow start, cwnd increases as acknowledgements arrive;
+    in the common conceptual model, this produces approximately exponential growth per round-trip time.
+    Once cwnd reaches the slow-start threshold, the sender transitions to congestion avoidance, where
+    growth is more gradual. Loss detection changes the sender's congestion state and may reduce the window.
+    Slow start is not a promise that the network is uncongested; it is a probing strategy that begins
+    cautiously and increases transmission until feedback indicates a limit. The experiment should plot
+    cwnd across RTT rounds and identify the transition at ssthresh. cwnd is a sender-side limit on outstanding
+    data, not the receiver's buffer size.
+  formulas: []
+  viz:
+    type: cwnd_graph
+    description: Plot simplified slow-start window growth over RTT rounds.
+    params:
+    - name: initial_cwnd
+      label: Initial cwnd
+      min: 1
+      max: 64
+      step: 1
+      default: 1
+      unit: segments
+    - name: rounds
+      label: RTT rounds
+      min: 0
+      max: 12
+      step: 1
+      default: 6
+      unit: rounds
+    - name: ssthresh
+      label: Slow-start threshold
+      min: 2
+      max: 4096
+      step: 1
+      default: 64
+      unit: segments
+    compute:
+      cwnd_before_threshold: initial_cwnd * pow(2, rounds)
+    outcomes:
+    - when: cwnd_before_threshold < ssthresh
+      title: Slow-start region
+      explain: The simplified exponential estimate remains below ssthresh.
+      severity: info
+    - when: cwnd_before_threshold >= ssthresh && cwnd_before_threshold <= ssthresh * 2
+      title: Threshold reached
+      explain: The estimate reaches or crosses the slow-start threshold.
+      severity: warn
+    - when: cwnd_before_threshold > ssthresh * 2
+      title: Beyond threshold estimate
+      explain: A real sender would have transitioned to congestion avoidance; do not continue exponential
+        growth.
+      severity: fail
+    combos_to_try:
+    - set:
+        initial_cwnd: 1
+        rounds: 4
+        ssthresh: 64
+      lesson: The estimate is 16 segments, below threshold.
+    - set:
+        initial_cwnd: 1
+        rounds: 6
+        ssthresh: 64
+      lesson: The estimate reaches 64 segments.
+    - set:
+        initial_cwnd: 2
+        rounds: 8
+        ssthresh: 64
+      lesson: The unbounded exponential estimate overshoots the threshold.
+  common_mistakes:
+  - Continuing exponential growth after ssthresh.
+  - Confusing cwnd with the advertised receive window.
+  - Assuming slow start means no congestion exists.
+  quiz:
+  - q: 'What does cwnd limit? '
+    options:
+    - Outstanding data in flight
+    - DNS cache entries
+    - HTTP header count
+    - Thread stack memory
+    answer: 0
+    why: The congestion window limits outstanding unacknowledged data.
+  - q: 'How does cwnd grow during slow start in the simplified model? '
+    options:
+    - Approximately exponentially per RTT
+    - Exactly one byte per hour
+    - It never changes
+    - Only when DNS TTL expires
+    answer: 0
+    why: Slow start produces approximately exponential growth per RTT.
+  - q: 'What happens at ssthresh? '
+    options:
+    - The sender transitions toward congestion avoidance
+    - TCP becomes UDP
+    - The connection closes
+    - The HTTP parser resets
+    answer: 0
+    why: ssthresh marks the transition out of slow start.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Plot cwnd by RTT and mark the point where the curve reaches ssthresh.
+- id: co2-aimd-congestion-control
+  code: CN-CO2.7.2
+  title: AIMD congestion control and convergence
+  session: 8
+  skilling_exp: 11
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co2-tcp-slow-start
+  eli5: AIMD increases the sending window gradually and decreases it when congestion is detected.
+  key_points:
+  - Additive increase raises the congestion window gradually.
+  - Multiplicative decrease reduces cwnd by a factor after congestion.
+  - AIMD provides a feedback-based congestion-control pattern.
+  - Competing flows can converge toward a fairer share under suitable assumptions.
+  - The exact behaviour depends on the congestion-control algorithm and network conditions.
+  deep_dive: 'AIMD stands for additive increase, multiplicative decrease. In a simplified congestion-avoidance
+    model, a sender increases its congestion window gradually while acknowledgements arrive, then reduces
+    the window multiplicatively when congestion is detected. This creates a sawtooth-like pattern: cautious
+    growth followed by a reduction. Under suitable assumptions about shared bottlenecks, similar feedback
+    and flow behaviour, AIMD can move competing senders toward a fairer allocation. It is a model for
+    understanding feedback and convergence, not a guarantee that every real network flow receives an identical
+    share. RTT differences, loss patterns, application limits and different congestion-control algorithms
+    can affect the result. The experiment should plot multiple flows, observe convergence and explain
+    how buffer sizing and bottleneck capacity influence queueing and loss. AIMD is a feedback rule; fairness
+    claims depend on the assumptions and competing flow conditions.'
+  formulas: []
+  viz:
+    type: cwnd_graph
+    description: Compare a congestion window before and after multiplicative decrease.
+    params:
+    - name: cwnd_before
+      label: Window before congestion
+      min: 1
+      max: 10000
+      step: 1
+      default: 100
+      unit: segments
+    - name: decrease_factor
+      label: Decrease factor
+      min: 0.1
+      max: 0.9
+      step: 0.1
+      default: 0.5
+      unit: fraction
+    compute:
+      cwnd_after: cwnd_before * decrease_factor
+    outcomes:
+    - when: cwnd_after >= cwnd_before * 0.7
+      title: Mild decrease
+      explain: The multiplicative reduction is relatively small.
+      severity: info
+    - when: cwnd_after < cwnd_before * 0.7 && cwnd_after >= cwnd_before * 0.4
+      title: Moderate decrease
+      explain: The window is reduced by a noticeable fraction.
+      severity: warn
+    - when: cwnd_after < cwnd_before * 0.4
+      title: Strong decrease
+      explain: The sender reduces its window substantially after congestion.
+      severity: fail
+    combos_to_try:
+    - set:
+        cwnd_before: 100
+        decrease_factor: 0.8
+      lesson: The new window is 80 segments.
+    - set:
+        cwnd_before: 100
+        decrease_factor: 0.5
+      lesson: The new window is 50 segments.
+    - set:
+        cwnd_before: 100
+        decrease_factor: 0.3
+      lesson: The new window is 30 segments.
+  common_mistakes:
+  - Calling additive increase exponential growth.
+  - Assuming all flows converge instantly.
+  - Ignoring RTT and algorithm differences when discussing fairness.
+  quiz:
+  - q: 'What does AIMD stand for? '
+    options:
+    - Additive Increase, Multiplicative Decrease
+    - Adaptive Internet Message Delivery
+    - Application Input, Memory Delay
+    - Acknowledgement Interval, Maximum Data
+    answer: 0
+    why: AIMD is Additive Increase, Multiplicative Decrease.
+  - q: 'What happens during multiplicative decrease? '
+    options:
+    - cwnd is reduced by a factor
+    - cwnd doubles every ACK
+    - DNS TTL decreases
+    - The TCP connection closes
+    answer: 0
+    why: The sender reduces its congestion window multiplicatively.
+  - q: 'Is AIMD fairness unconditional? '
+    options:
+    - 'Yes'
+    - No, it depends on assumptions and conditions
+    - Only for UDP
+    - Only with TLS
+    answer: 1
+    why: Fairness depends on network and flow assumptions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Simulate two AIMD flows sharing a bottleneck and describe whether and how their rates converge.
+- id: co2-fast-recovery
+  code: CN-CO2.7.3
+  title: Fast recovery and congestion-window response
+  session: 8
+  skilling_exp: 11
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co2-aimd-congestion-control
+  - co2-fast-retransmit-loss-recovery
+  eli5: Fast recovery adjusts the congestion window after a fast retransmit without treating the event
+    exactly like an RTO.
+  key_points:
+  - Fast retransmit identifies likely loss using duplicate ACKs.
+  - Fast recovery changes cwnd and ssthresh during recovery.
+  - Classic Reno-style recovery differs from timeout recovery.
+  - New acknowledgements move the sender out of recovery.
+  - Congestion-control algorithm details matter.
+  deep_dive: Fast recovery is the congestion-control response associated with fast retransmit in classic
+    TCP descriptions. After duplicate acknowledgements indicate a likely missing segment, the sender retransmits
+    it and adjusts its congestion state. In a Reno-style explanation, ssthresh is set based on the flight
+    size and cwnd is reduced but not necessarily reset to the initial window as it would be after a retransmission
+    timeout. Additional duplicate ACKs can temporarily inflate cwnd, reflecting data that has left the
+    network and been acknowledged. When the acknowledgement covering the retransmitted data arrives, the
+    sender exits fast recovery and continues in congestion avoidance. Modern congestion-control algorithms
+    can use different details, so this course concept should focus on the relationship between the loss
+    signal, retransmission and window response rather than asserting that every implementation follows
+    one identical formula. Fast recovery is distinct from timeout recovery; identify which loss signal
+    caused the response.
+  formulas: []
+  viz:
+    type: cwnd_graph
+    description: Compare a pre-loss window with a simplified fast-recovery window.
+    params:
+    - name: cwnd_before
+      label: Pre-loss cwnd
+      min: 2
+      max: 10000
+      step: 1
+      default: 100
+      unit: segments
+    - name: ssthresh_factor
+      label: ssthresh factor
+      min: 0.1
+      max: 0.9
+      step: 0.1
+      default: 0.5
+      unit: fraction
+    compute:
+      ssthresh: cwnd_before * ssthresh_factor
+    outcomes:
+    - when: ssthresh >= cwnd_before * 0.7
+      title: Small window reduction
+      explain: The selected threshold retains most of the previous window.
+      severity: info
+    - when: ssthresh < cwnd_before * 0.7 && ssthresh >= cwnd_before * 0.4
+      title: Moderate window reduction
+      explain: The selected threshold reduces the previous window substantially.
+      severity: warn
+    - when: ssthresh < cwnd_before * 0.4
+      title: Large window reduction
+      explain: The selected threshold retains less than 40% of the previous window.
+      severity: fail
+    combos_to_try:
+    - set:
+        cwnd_before: 100
+        ssthresh_factor: 0.8
+      lesson: The threshold is 80 segments.
+    - set:
+        cwnd_before: 100
+        ssthresh_factor: 0.5
+      lesson: The threshold is 50 segments.
+    - set:
+        cwnd_before: 100
+        ssthresh_factor: 0.3
+      lesson: The threshold is 30 segments.
+  common_mistakes:
+  - Treating fast recovery and RTO recovery as identical.
+  - Assuming every congestion-control algorithm uses Reno's exact rules.
+  - Forgetting that the ACK covering retransmitted data ends recovery.
+  quiz:
+  - q: 'Fast recovery is commonly associated with which signal? '
+    options:
+    - Duplicate ACKs and fast retransmit
+    - DNS TTL expiry
+    - HTTP 404
+    - Socket bind failure
+    answer: 0
+    why: Fast recovery follows the fast retransmit path.
+  - q: 'What is ssthresh used for? '
+    options:
+    - Congestion-control threshold
+    - DNS record lifetime
+    - Socket descriptor limit
+    - HTTP body length
+    answer: 0
+    why: ssthresh helps govern congestion-window growth phases.
+  - q: 'Does every modern TCP algorithm use identical fast-recovery details? '
+    options:
+    - 'Yes'
+    - 'No'
+    - Only over IPv6
+    - Only when using UDP
+    answer: 1
+    why: Algorithm-specific recovery behaviour differs.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Draw cwnd and ssthresh before and after a duplicate-ACK loss event, then contrast an RTO
+    event.
+- id: co2-mathis-relation-fairness
+  code: CN-CO2.7.4
+  title: Mathis relation, TCP fairness and buffer sizing
+  session: 8
+  skilling_exp: 12
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co2-aimd-congestion-control
+  eli5: The Mathis relation estimates TCP throughput using MSS, RTT and packet-loss probability.
+  key_points:
+  - The Mathis model relates throughput to MSS, RTT and loss probability.
+  - Larger RTT reduces the estimated throughput for the same MSS and loss rate.
+  - Higher loss probability reduces estimated throughput.
+  - Fairness compares how competing flows share bottleneck capacity.
+  - Buffer sizing influences queueing delay and the chance of buffer-related loss.
+  deep_dive: 'The Mathis relation is a throughput approximation for a long-lived TCP flow under stated
+    assumptions. A commonly used form is throughput approximately equal to (MSS / RTT) × C / sqrt(p),
+    where MSS is the maximum segment size, RTT is round-trip time, p is packet-loss probability and C
+    is a model constant. The relation highlights the sensitivity of throughput to RTT and loss: increasing
+    RTT or loss reduces the estimate, while a larger MSS increases it. It is not a universal prediction
+    for every TCP variant or workload, and its assumptions should be stated when applying it. Fairness
+    analysis compares how flows share a bottleneck, while buffer sizing examines the trade-off between
+    absorbing bursts and adding queueing delay. The course experiment links the Mathis estimate to observed
+    throughput and considers how TLS affects application data without changing the basic transport relation.
+    Use the Mathis relation as an estimate with explicit assumptions, not as a guaranteed measured throughput.'
+  formulas: []
+  viz:
+    type: custom
+    description: Estimate throughput using a simplified Mathis-style relation.
+    params:
+    - name: mss_bytes
+      label: MSS
+      min: 256
+      max: 9000
+      step: 1
+      default: 1460
+      unit: bytes
+    - name: rtt_ms
+      label: RTT
+      min: 1
+      max: 1000
+      step: 1
+      default: 50
+      unit: ms
+    - name: loss_percent
+      label: Loss probability
+      min: 0.01
+      max: 20
+      step: 0.01
+      default: 1
+      unit: '%'
+    compute:
+      throughput_mbps: (mss_bytes / (rtt_ms / 1000)) * 0.7 / sqrt(loss_percent / 100) * 8 / 1000000
+    outcomes:
+    - when: throughput_mbps >= 10
+      title: Higher estimated throughput
+      explain: The model estimate is at least 10 Mbps for the selected inputs.
+      severity: info
+    - when: throughput_mbps >= 1 && throughput_mbps < 10
+      title: Moderate estimated throughput
+      explain: The model estimate is between 1 and 10 Mbps.
+      severity: warn
+    - when: throughput_mbps < 1
+      title: Low estimated throughput
+      explain: The selected RTT and loss yield an estimate below 1 Mbps.
+      severity: fail
+    combos_to_try:
+    - set:
+        mss_bytes: 1460
+        rtt_ms: 20
+        loss_percent: 0.1
+      lesson: Low loss and short RTT produce a higher estimate.
+    - set:
+        mss_bytes: 1460
+        rtt_ms: 100
+        loss_percent: 1
+      lesson: Higher RTT and loss reduce the estimate.
+    - set:
+        mss_bytes: 1460
+        rtt_ms: 300
+        loss_percent: 5
+      lesson: The model predicts a much lower throughput.
+  common_mistakes:
+  - Using loss percentage as a fraction without conversion.
+  - Forgetting RTT is converted to seconds in the expression.
+  - Treating the estimate as exact for all congestion-control algorithms.
+  quiz:
+  - q: 'In the Mathis relation, what does MSS represent? '
+    options:
+    - Maximum segment size
+    - Maximum socket state
+    - Message sequence status
+    - Multipath server speed
+    answer: 0
+    why: MSS is the maximum TCP segment payload size.
+  - q: 'What happens to estimated throughput when RTT increases, all else equal? '
+    options:
+    - It decreases
+    - It increases
+    - It is unchanged always
+    - It becomes a DNS value
+    answer: 0
+    why: The relation is inversely proportional to RTT.
+  - q: 'What happens when loss probability increases? '
+    options:
+    - Estimated throughput decreases
+    - Estimated throughput doubles
+    - TLS is disabled
+    - The receive window disappears
+    answer: 0
+    why: The model includes an inverse square-root dependence on loss probability.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Calculate the Mathis estimate for two RTT/loss scenarios and compare the result with a measured
+    throughput.

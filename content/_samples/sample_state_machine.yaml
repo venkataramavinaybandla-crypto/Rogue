@@ -1,0 +1,32 @@
+part:
+  id: sample-part-07
+  co: CO-1
+  title: Sample Protocol Finite State Machine Test
+  order: 106
+  concept_ids:
+    - state_machine-sample-test
+concepts:
+  - id: state_machine-sample-test
+    code: "TEST-STATE_MACHINE"
+    title: "Protocol Finite State Machine Test"
+    session: 1
+    skilling_exp: 1
+    btl: 3
+    difficulty: 2
+    prereqs: []
+    eli5: "Interactive verification suite for state_machine visualizer in Rogue telemetry system."
+    key_points:
+      - "Driven strictly by params, values, outputs, outcomes contract."
+      - "Features live bidirectional interaction and animation."
+    deep_dive: "Detailed operational verification of state_machine component under Rogue dashboard engine."
+    formulas: []
+    viz:
+      type: "state_machine"
+      description: "Sample test suite for state_machine"
+      params: [{"name":"state","label":"State Index","min":0,"max":4,"step":1,"default":3,"unit":"idx"}]
+      compute: {"is_connected":"state == 3 ? 1 : 0"}
+      outcomes: [{"when":"state == 3","title":"ESTABLISHED Connection","explain":"Bidirectional streaming active.","severity":"info"},{"when":"state == 0","title":"CLOSED State","explain":"Socket has terminated.","severity":"warn"}]
+      combos_to_try: [{"set":{"state":3},"lesson":"Jump directly to ESTABLISHED."}]
+    common_mistakes: []
+    quiz: []
+    exam_tags: ["diagnostic", "sample"]

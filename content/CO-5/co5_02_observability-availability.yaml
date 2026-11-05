@@ -1,0 +1,345 @@
+part:
+  id: co5_02
+  co: CO-5
+  title: Observability and Availability
+  order: 2
+  concept_ids:
+  - co5-observability-cardinality
+  - co5-flow-sampling
+  - co5-availability-arithmetic
+concepts:
+- id: co5-observability-cardinality
+  code: CN-CO5.02.1
+  title: Observability, Metrics and Cardinality
+  session: 18
+  skilling_exp: 21
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co5-troubleshooting-problem-statement
+  eli5: Observability uses signals such as metrics, logs and traces to understand what a system is doing. Cardinality
+    is the number of distinct label combinations a metric can create.
+  key_points:
+  - Metrics show numerical behaviour over time; logs record events; traces connect work across components.
+  - Labels help filter and group telemetry but can create large numbers of time series.
+  - High-cardinality labels such as unique request IDs can increase storage and query cost.
+  - Useful dashboards connect service-level symptoms to component-level evidence.
+  - Telemetry must be selected to answer operational questions rather than collected indiscriminately.
+  deep_dive: 'Observability, Metrics and Cardinality belongs to Observability and Availability in CO-5, which focuses
+    on evaluating and operating the network that has already been built. The aim is to turn an operational symptom
+    into a defensible conclusion supported by repeatable evidence. Start by defining the service behaviour that
+    is failing, the affected scope and the time interval. State a hypothesis that predicts an observable result,
+    then select a test that can distinguish it from competing explanations. Collect evidence from relevant endpoints
+    and intermediate systems, including counters, logs, traces, packet observations and configuration state. The
+    formula included with this concept is a compact model: identify every variable, preserve units, state assumptions
+    and explain the limits of the result. The visualization is a learning aid rather than a complete implementation
+    of a vendor device or production control plane. For a real change, estimate the blast radius, make one controlled
+    adjustment, retain a rollback path and repeat the original test. Verification should demonstrate service restoration
+    and check for regressions, not merely confirm that a command returned successfully. Document the hypothesis,
+    test, evidence, change and outcome so another engineer can reproduce the reasoning. This disciplined process
+    reduces guesswork and makes network operations safer, faster and easier to audit.'
+  formulas:
+  - id: co5-observability-cardinality-formula
+    latex: N_series ≈ product(c_i)
+    vars: 'N_series: possible time series; c_i: distinct values for label i'
+    example: If three labels have 5, 4 and 10 possible values, their combination can produce up to 200 series.
+  viz:
+    type: bar_compare
+    description: Explore the operational relationship behind observability, metrics and cardinality using controlled
+      input values; compare the simplified result with measured system behaviour.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified learning model.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying operational condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Establish a baseline with Input A twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed result.
+  common_mistakes:
+  - Adding unbounded identifiers as metric labels.
+  - Assuming more telemetry automatically means better observability.
+  - Ignoring the cost of high-cardinality dimensions.
+  quiz:
+  - q: What is the central purpose of Observability, Metrics and Cardinality?
+    options:
+    - Apply or analyze observability, metrics and cardinality in network operations
+    - Encrypt all application traffic
+    - Replace routing protocols
+    - Guarantee that no network fault can occur
+    answer: 0
+    why: The concept supports the specific operational capability named in the question.
+  - q: Which practice best supports reliable fault resolution?
+    options:
+    - Make several changes before measuring
+    - Use a falsifiable hypothesis, controlled test and recorded evidence
+    - Assume a green dashboard proves every user path works
+    - Skip verification after a configuration change
+    answer: 1
+    why: A testable hypothesis and evidence-based workflow distinguish causes and validate the fix.
+  - q: What should happen after a risky network change?
+    options:
+    - Delete the previous configuration immediately
+    - Assume success if the command completed
+    - Verify service behaviour and retain a rollback path
+    - Avoid documenting the change
+    answer: 2
+    why: Operational success requires service-level verification and a safe recovery option.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Create a small practical exercise for observability, metrics and cardinality. State the expected behaviour,
+    collect evidence, make one controlled change if needed, and record verification and rollback considerations.
+- id: co5-flow-sampling
+  code: CN-CO5.02.2
+  title: Flow Sampling and Observability Trade-Offs
+  session: 18
+  skilling_exp: 21
+  btl: 4
+  difficulty: 2
+  prereqs:
+  - co5-observability-cardinality
+  eli5: Flow sampling records only a portion of observed traffic to reduce collection cost. Sampling saves resources,
+    but rare events may be missed and counts need careful interpretation.
+  key_points:
+  - Flow records summarize conversations using fields such as endpoints, ports, protocol and byte counts.
+  - Sampling reduces telemetry volume and processing overhead.
+  - A sampling rate must be known before extrapolating observed counts.
+  - Small or short-lived flows are more likely to be missed by some sampling strategies.
+  - Use packet-level evidence when a sampled flow record cannot answer the fault question.
+  deep_dive: 'Flow Sampling and Observability Trade-Offs belongs to Observability and Availability in CO-5, which
+    focuses on evaluating and operating the network that has already been built. The aim is to turn an operational
+    symptom into a defensible conclusion supported by repeatable evidence. Start by defining the service behaviour
+    that is failing, the affected scope and the time interval. State a hypothesis that predicts an observable result,
+    then select a test that can distinguish it from competing explanations. Collect evidence from relevant endpoints
+    and intermediate systems, including counters, logs, traces, packet observations and configuration state. The
+    formula included with this concept is a compact model: identify every variable, preserve units, state assumptions
+    and explain the limits of the result. The visualization is a learning aid rather than a complete implementation
+    of a vendor device or production control plane. For a real change, estimate the blast radius, make one controlled
+    adjustment, retain a rollback path and repeat the original test. Verification should demonstrate service restoration
+    and check for regressions, not merely confirm that a command returned successfully. Document the hypothesis,
+    test, evidence, change and outcome so another engineer can reproduce the reasoning. This disciplined process
+    reduces guesswork and makes network operations safer, faster and easier to audit.'
+  formulas:
+  - id: co5-flow-sampling-formula
+    latex: Estimated_total = observed_count / p
+    vars: 'observed_count: sampled count; p: sampling probability'
+    example: If 1 in 100 packets is sampled and 50 packets are observed, a simple estimate is 5,000 packets; sampling
+      variance remains.
+  viz:
+    type: bar_compare
+    description: Explore the operational relationship behind flow sampling and observability trade-offs using controlled
+      input values; compare the simplified result with measured system behaviour.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified learning model.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying operational condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Establish a baseline with Input A twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed result.
+  common_mistakes:
+  - Treating sampled observations as a complete packet record.
+  - Forgetting the sampling probability when estimating totals.
+  - Assuming a sampled record can prove packet ordering or payload content.
+  quiz:
+  - q: What is the central purpose of Flow Sampling and Observability Trade-Offs?
+    options:
+    - Apply or analyze flow sampling and observability trade-offs in network operations
+    - Encrypt all application traffic
+    - Replace routing protocols
+    - Guarantee that no network fault can occur
+    answer: 0
+    why: The concept supports the specific operational capability named in the question.
+  - q: Which practice best supports reliable fault resolution?
+    options:
+    - Make several changes before measuring
+    - Use a falsifiable hypothesis, controlled test and recorded evidence
+    - Assume a green dashboard proves every user path works
+    - Skip verification after a configuration change
+    answer: 1
+    why: A testable hypothesis and evidence-based workflow distinguish causes and validate the fix.
+  - q: What should happen after a risky network change?
+    options:
+    - Delete the previous configuration immediately
+    - Assume success if the command completed
+    - Verify service behaviour and retain a rollback path
+    - Avoid documenting the change
+    answer: 2
+    why: Operational success requires service-level verification and a safe recovery option.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Create a small practical exercise for flow sampling and observability trade-offs. State the expected
+    behaviour, collect evidence, make one controlled change if needed, and record verification and rollback considerations.
+- id: co5-availability-arithmetic
+  code: CN-CO5.02.3
+  title: Availability Chains and Availability Arithmetic
+  session: 18
+  skilling_exp: 21
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co5-observability-cardinality
+  eli5: Availability estimates how often a service is usable. When a service depends on several required components
+    in series, every component must work for the whole path to work.
+  key_points:
+  - Availability is commonly expressed as a fraction or percentage of time service is usable.
+  - For independent serial dependencies, end-to-end availability is the product of component availabilities.
+  - Redundant parallel components can improve availability when failures are sufficiently independent.
+  - A dependency map is needed before calculating a service availability chain.
+  - A percentage should be paired with a time window and a clear definition of service success.
+  deep_dive: 'Availability Chains and Availability Arithmetic belongs to Observability and Availability in CO-5,
+    which focuses on evaluating and operating the network that has already been built. The aim is to turn an operational
+    symptom into a defensible conclusion supported by repeatable evidence. Start by defining the service behaviour
+    that is failing, the affected scope and the time interval. State a hypothesis that predicts an observable result,
+    then select a test that can distinguish it from competing explanations. Collect evidence from relevant endpoints
+    and intermediate systems, including counters, logs, traces, packet observations and configuration state. The
+    formula included with this concept is a compact model: identify every variable, preserve units, state assumptions
+    and explain the limits of the result. The visualization is a learning aid rather than a complete implementation
+    of a vendor device or production control plane. For a real change, estimate the blast radius, make one controlled
+    adjustment, retain a rollback path and repeat the original test. Verification should demonstrate service restoration
+    and check for regressions, not merely confirm that a command returned successfully. Document the hypothesis,
+    test, evidence, change and outcome so another engineer can reproduce the reasoning. This disciplined process
+    reduces guesswork and makes network operations safer, faster and easier to audit.'
+  formulas:
+  - id: co5-availability-arithmetic-formula
+    latex: A_series = product(A_i)
+    vars: 'A_series: end-to-end serial availability; A_i: availability of each required component'
+    example: Three independent required components at 99%, 99.5% and 99.9% yield approximately 98.405% end-to-end
+      availability.
+  viz:
+    type: bar_compare
+    description: Explore the operational relationship behind availability chains and availability arithmetic using
+      controlled input values; compare the simplified result with measured system behaviour.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified learning model.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying operational condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Establish a baseline with Input A twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed result.
+  common_mistakes:
+  - Adding component availability percentages.
+  - Assuming failures are independent without justification.
+  - Reporting availability without defining the service or measurement window.
+  quiz:
+  - q: What is the central purpose of Availability Chains and Availability Arithmetic?
+    options:
+    - Apply or analyze availability chains and availability arithmetic in network operations
+    - Encrypt all application traffic
+    - Replace routing protocols
+    - Guarantee that no network fault can occur
+    answer: 0
+    why: The concept supports the specific operational capability named in the question.
+  - q: Which practice best supports reliable fault resolution?
+    options:
+    - Make several changes before measuring
+    - Use a falsifiable hypothesis, controlled test and recorded evidence
+    - Assume a green dashboard proves every user path works
+    - Skip verification after a configuration change
+    answer: 1
+    why: A testable hypothesis and evidence-based workflow distinguish causes and validate the fix.
+  - q: What should happen after a risky network change?
+    options:
+    - Delete the previous configuration immediately
+    - Assume success if the command completed
+    - Verify service behaviour and retain a rollback path
+    - Avoid documenting the change
+    answer: 2
+    why: Operational success requires service-level verification and a safe recovery option.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Create a small practical exercise for availability chains and availability arithmetic. State the expected
+    behaviour, collect evidence, make one controlled change if needed, and record verification and rollback considerations.

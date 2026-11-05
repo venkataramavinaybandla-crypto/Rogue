@@ -1,0 +1,366 @@
+part:
+  id: co1-part-01
+  co: CO-1
+  title: Network Layering and Reference Models
+  order: 1
+  concept_ids:
+    - why-network-layering-exists
+    - osi-reference-model
+    - tcp-ip-model
+    - network-layers-and-protocol-services
+concepts:
+  - id: why-network-layering-exists
+    code: "CN-1.1.1"
+    title: Why Network Layering Exists
+    session: 1
+    skilling_exp: null
+    btl: 2
+    difficulty: 1
+    prereqs: []
+    eli5: |
+      Imagine sending a gift to a friend in another country. One person packs it, another transports it, and someone else delivers it.
+      Each person has a clear job. Computer networks use the same idea.
+      Layering divides communication into smaller jobs. Each layer handles one part and works with the layers beside it.
+      This makes networks easier to build, understand, change, and troubleshoot.
+    key_points:
+      - Layering divides network communication into smaller functional tasks.
+      - Each layer provides services to the layer above it.
+      - Each layer uses services provided by the layer below it.
+      - Peer layers communicate using agreed protocols.
+      - A change inside one layer can often be made without redesigning every other layer, provided the service boundary remains compatible.
+    deep_dive: |
+      Network communication involves several different responsibilities, including moving signals, transferring frames, delivering packets, providing end-to-end transport, and supporting applications. A layered architecture separates these responsibilities into distinct functional levels. Each layer has a defined role and offers services to the layer above it while relying on the layer below it. Protocols define the rules followed by corresponding peer layers on communicating systems. The separation creates modularity: an implementation at one layer can change while other layers continue to use the same service interface. For example, an application can use a transport service without needing to know the details of the physical medium carrying the bits. Layering also provides a practical way to describe, design, and troubleshoot networks because a problem can be investigated in relation to a particular function. However, layers are models of responsibilities rather than physically separate devices, and real implementations may combine or optimize functions across layer boundaries.
+    formulas: []
+    viz:
+      type: topology_graph
+      description: A user can inspect a sender and receiver connected through matching functional layers, then toggle a layer boundary to see which responsibility is isolated.
+      params:
+        - name: visible_layers
+          label: Number of visible functional layers
+          min: 1
+          max: 7
+          step: 1
+          default: 7
+          unit: layers
+      compute:
+        missing_layers: "7 - visible_layers"
+      outcomes:
+        - when: "visible_layers >= 5"
+          title: Most responsibilities are separated
+          explain: Several network jobs have their own place, making it easier to identify where a task belongs.
+          severity: info
+        - when: "visible_layers >= 3 && visible_layers < 5"
+          title: Some responsibilities are grouped
+          explain: Fewer boundaries are visible, so one layer may represent several related jobs.
+          severity: warn
+        - when: "visible_layers < 3"
+          title: Too few functional groups
+          explain: Many different jobs are bundled together, making the communication design harder to explain and troubleshoot.
+          severity: fail
+      combos_to_try:
+        - set:
+            visible_layers: 7
+          lesson: See how separating responsibilities gives each network function a clear place.
+        - set:
+            visible_layers: 4
+          lesson: Compare a model that groups several responsibilities into fewer layers.
+        - set:
+            visible_layers: 2
+          lesson: Observe how combining most responsibilities makes fault isolation less clear.
+    common_mistakes:
+      - Treating layers as separate physical machines rather than functional divisions.
+      - Assuming every network implementation must use exactly the same internal design.
+      - Confusing a layer's service with the protocol used to provide that service.
+    quiz:
+      - q: What is the main purpose of a layered network architecture?
+        options:
+          - To make every device use identical hardware
+          - To divide communication into manageable functional responsibilities
+          - To remove the need for protocols
+          - To guarantee that packets never get lost
+        answer: 1
+        why: Layering separates communication tasks so they can be designed and understood independently.
+      - q: What does a layer normally provide to the layer above it?
+        options:
+          - A service
+          - A physical cable
+          - A user password
+          - A routing table in every case
+        answer: 0
+        why: A layer offers a service upward and relies on the layer below for support.
+      - q: What defines the rules followed by corresponding peer layers?
+        options:
+          - A protocol
+          - A screen resolution
+          - A file extension
+          - A power supply
+        answer: 0
+        why: Peer entities use protocols to communicate according to agreed rules.
+    exam_tags:
+      - mid-term
+      - end-sem
+      - project
+    mini_task: Draw a simple sender-to-receiver network and label at least four separate responsibilities that layering helps organize.
+
+  - id: osi-reference-model
+    code: "CN-1.1.2"
+    title: OSI Reference Model
+    session: 1
+    skilling_exp: null
+    btl: 2
+    difficulty: 2
+    prereqs:
+      - why-network-layering-exists
+    eli5: |
+      The OSI model is like a seven-step checklist for sending information.
+      Each step has a different job, from moving electrical or radio signals to helping an application communicate.
+      The seven layers are Physical, Data Link, Network, Transport, Session, Presentation, and Application.
+      The model gives people a shared way to discuss where a network function belongs.
+    key_points:
+      - The OSI reference model contains seven layers.
+      - Layer 1 is Physical; it concerns transmission of raw bits over a medium.
+      - Layer 2 is Data Link; it organizes bits into frames for a local link.
+      - Layer 3 is Network; it supports logical addressing and packet forwarding.
+      - Layer 4 is Transport; it provides process-to-process transport services.
+      - Layers 5, 6, and 7 are Session, Presentation, and Application.
+      - The model is a reference framework for describing network functions.
+    deep_dive: |
+      The Open Systems Interconnection (OSI) reference model organizes network communication into seven layers. From the bottom upward, they are Physical, Data Link, Network, Transport, Session, Presentation, and Application. The Physical layer concerns the transmission of raw bits through a medium. The Data Link layer handles framing and communication over a local link. The Network layer supports logical addressing and forwarding across interconnected networks. The Transport layer provides communication between processes on end systems. The Session layer concerns the organization of communication sessions, while the Presentation layer concerns the representation and interpretation of exchanged data. The Application layer provides network-related services used by application processes. The model helps describe responsibilities and locate problems by function. It should not be mistaken for a literal description of seven separate hardware components: implementations distribute these functions across software, operating systems, network devices, and physical interfaces. In this course, the OSI model is introduced as part of understanding Internet architecture and network layering.
+    formulas: []
+    viz:
+      type: topology_graph
+      description: A seven-level stack that can be expanded one layer at a time; selecting a layer reveals its name, position, and primary responsibility.
+      params:
+        - name: selected_layer
+          label: Selected OSI layer number
+          min: 1
+          max: 7
+          step: 1
+          default: 3
+          unit: layer
+      compute:
+        layers_above: "7 - selected_layer"
+      outcomes:
+        - when: "selected_layer >= 1 && selected_layer <= 7"
+          title: Valid OSI layer selected
+          explain: The selected number maps to one of the seven named layers in the reference model.
+          severity: info
+      combos_to_try:
+        - set:
+            selected_layer: 1
+          lesson: Layer 1 is the Physical layer, at the bottom of the model.
+        - set:
+            selected_layer: 3
+          lesson: Layer 3 is the Network layer, associated with logical addressing and forwarding.
+        - set:
+            selected_layer: 7
+          lesson: Layer 7 is the Application layer, at the top of the model.
+    common_mistakes:
+      - Listing the layers in reverse order without stating the direction.
+      - Confusing the Data Link layer with the Network layer.
+      - Treating the OSI model as a protocol suite rather than a reference model.
+    quiz:
+      - q: How many layers are in the OSI reference model?
+        options:
+          - 4
+          - 5
+          - 6
+          - 7
+        answer: 3
+        why: The OSI reference model defines seven layers.
+      - q: Which OSI layer is responsible for logical addressing and forwarding?
+        options:
+          - Physical
+          - Data Link
+          - Network
+          - Presentation
+        answer: 2
+        why: The Network layer is Layer 3 and handles packet forwarding across networks.
+      - q: Which layer is at the top of the OSI model?
+        options:
+          - Transport
+          - Session
+          - Presentation
+          - Application
+        answer: 3
+        why: Application is Layer 7, the highest OSI layer.
+    exam_tags:
+      - mid-term
+      - end-sem
+    mini_task: Write all seven OSI layers from bottom to top and add one short responsibility beside each.
+
+  - id: tcp-ip-model
+    code: "CN-1.1.3"
+    title: TCP/IP Model
+    session: 1
+    skilling_exp: null
+    btl: 2
+    difficulty: 2
+    prereqs:
+      - why-network-layering-exists
+      - osi-reference-model
+    eli5: |
+      The TCP/IP model is a practical way to group the jobs used by the Internet.
+      It is commonly shown with four layers: Link, Internet, Transport, and Application.
+      Think of it as a shorter map of how Internet communication works.
+      Its groups do not always match the seven OSI layers one by one.
+    key_points:
+      - The TCP/IP model describes the architecture used by the Internet.
+      - The common four-layer presentation uses Link, Internet, Transport, and Application.
+      - The Link layer covers communication over the directly connected network medium.
+      - The Internet layer supports IP addressing and packet delivery across networks.
+      - The Transport layer supports end-to-end communication between processes.
+      - The Application layer includes protocols used by network applications.
+      - TCP/IP and OSI are related models but their layer boundaries differ.
+    deep_dive: |
+      The TCP/IP model describes the layered architecture associated with the Internet protocol suite. A common presentation uses four layers: Link, Internet, Transport, and Application. The Link layer concerns delivery over the local network technology. The Internet layer provides IP-based addressing and packet delivery across interconnected networks. The Transport layer supports communication between application processes, with transport protocols defining how data is exchanged. The Application layer contains protocols that provide network services directly to application processes. The TCP/IP model is often compared with the seven-layer OSI reference model, but the two do not have a one-to-one correspondence at every layer. In particular, functions represented separately by the OSI Session, Presentation, and Application layers are commonly grouped within the TCP/IP Application layer. The TCP/IP model is useful for explaining the organization of Internet communication and for relating protocol services to the functions performed by networked systems. The handout introduces both models in Session 1 as foundations for understanding Internet architecture and network layering.
+    formulas: []
+    viz:
+      type: topology_graph
+      description: A four-layer TCP/IP stack beside a seven-layer OSI stack; the user selects a TCP/IP layer to inspect its role and related OSI functions.
+      params:
+        - name: selected_layer
+          label: Selected TCP/IP layer number
+          min: 1
+          max: 4
+          step: 1
+          default: 2
+          unit: layer
+      compute:
+        layers_above: "4 - selected_layer"
+      outcomes:
+        - when: "selected_layer >= 1 && selected_layer <= 4"
+          title: Valid TCP/IP layer selected
+          explain: The selected number maps to Link, Internet, Transport, or Application in the four-layer presentation.
+          severity: info
+      combos_to_try:
+        - set:
+            selected_layer: 1
+          lesson: Inspect the Link layer and its role in local network delivery.
+        - set:
+            selected_layer: 2
+          lesson: Inspect the Internet layer and its role in IP packet delivery.
+        - set:
+            selected_layer: 4
+          lesson: Inspect the Application layer and its network application protocols.
+    common_mistakes:
+      - Assuming TCP/IP has seven layers because OSI has seven.
+      - Assuming the TCP/IP and OSI layers map one-to-one.
+      - Confusing the TCP/IP Internet layer with the OSI Application layer.
+    quiz:
+      - q: How many layers are used in the common four-layer TCP/IP presentation?
+        options:
+          - 3
+          - 4
+          - 5
+          - 7
+        answer: 1
+        why: The common presentation groups network functions into four layers.
+      - q: Which TCP/IP layer is responsible for IP packet delivery across networks?
+        options:
+          - Link
+          - Internet
+          - Transport
+          - Application
+        answer: 1
+        why: The Internet layer handles IP-based addressing and packet delivery.
+      - q: Which statement about OSI and TCP/IP is correct?
+        options:
+          - They always have identical layer boundaries
+          - TCP/IP is the seven-layer reference model
+          - Their layer boundaries differ, although their functions can be related
+          - OSI contains no application functions
+        answer: 2
+        why: The models organize related networking responsibilities differently.
+    exam_tags:
+      - mid-term
+      - end-sem
+    mini_task: Draw the four TCP/IP layers and annotate each with one function described in the handout.
+
+  - id: network-layers-and-protocol-services
+    code: "CN-1.1.4"
+    title: Network Layers and Protocol Services
+    session: 1
+    skilling_exp: null
+    btl: 2
+    difficulty: 2
+    prereqs:
+      - osi-reference-model
+      - tcp-ip-model
+    eli5: |
+      Imagine a school office. The front desk accepts a request, other staff handle different steps, and the right result comes back.
+      Network layers work in a similar organized way.
+      A service describes what one layer offers to the layer above it.
+      A protocol describes the rules used by network parts that communicate with each other.
+    key_points:
+      - A service describes the function offered by one layer to the layer above it.
+      - A protocol specifies rules used by peer entities at corresponding layers.
+      - Interfaces describe how adjacent layers access services.
+      - Layering separates what a layer offers from how it performs the work.
+      - Protocol services help explain how application communication is supported by lower network functions.
+    deep_dive: |
+      A network layer's service describes what that layer makes available to the layer above it. A protocol, by contrast, defines the rules and message exchanges used by peer entities at corresponding layers on different systems. The interface between adjacent layers identifies how the upper layer accesses the service offered below it. These distinctions are central to understanding a layered architecture: a service describes the capability provided, while a protocol describes the mechanism and rules used by peer entities. For example, an application uses a transport service to exchange data with another application process, while the transport protocol governs the corresponding transport-level communication. The application does not need to implement the details of every lower layer itself. Separating services, interfaces, and protocols supports modular network design and makes it possible to reason about communication at different levels. Session 1 of the handout explicitly introduces network layering and protocol services alongside the OSI and TCP/IP models.
+    formulas: []
+    viz:
+      type: custom
+      description: An interactive two-system view showing an upper layer requesting a service, adjacent layers connected by interfaces, and peer layers following a protocol.
+      params:
+        - name: service_steps
+          label: Number of service handoff steps shown
+          min: 1
+          max: 4
+          step: 1
+          default: 2
+          unit: steps
+      compute:
+        remaining_steps: "4 - service_steps"
+      outcomes:
+        - when: "service_steps >= 2"
+          title: Service path is visible
+          explain: Multiple handoffs show how one layer can rely on services from layers below it.
+          severity: info
+        - when: "service_steps == 1"
+          title: Minimal service path
+          explain: Only one handoff is shown, so fewer layer relationships are visible.
+          severity: warn
+      combos_to_try:
+        - set:
+            service_steps: 4
+          lesson: Follow a service request through several adjacent-layer handoffs.
+        - set:
+            service_steps: 2
+          lesson: Compare a shorter service path while keeping the distinction between service and protocol.
+    common_mistakes:
+      - Using the words service and protocol as if they mean the same thing.
+      - Assuming a protocol describes the interface between adjacent layers.
+      - Assuming an application must know the implementation details of every lower layer.
+    quiz:
+      - q: What does a service describe in a layered network architecture?
+        options:
+          - What a layer offers to the layer above it
+          - The physical shape of a router
+          - The rules followed only by users
+          - The number of computers in a network
+        answer: 0
+        why: A service is the capability that a layer makes available to the layer above.
+      - q: What does a protocol define?
+        options:
+          - The color of a network cable
+          - Rules followed by peer entities communicating at corresponding layers
+          - The screen layout of an application
+          - The physical location of a server
+        answer: 1
+        why: Protocols specify the rules and message exchanges used by peer layers.
+      - q: What is the role of an interface between adjacent layers?
+        options:
+          - To define how the upper layer accesses the lower layer's service
+          - To replace every network protocol
+          - To connect unrelated users
+          - To measure only propagation delay
+        answer: 0
+        why: The interface describes how a layer uses the service offered by the layer below.
+    exam_tags:
+      - mid-term
+      - end-sem
+      - project
+    mini_task: Create a two-column comparison showing the difference between a network service and a network protocol, with one example of each.

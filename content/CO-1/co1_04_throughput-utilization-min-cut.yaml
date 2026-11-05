@@ -1,0 +1,426 @@
+part:
+  id: co1-part-04
+  co: CO1
+  title: Throughput, Min-Cut, Utilization, and Three-Point Captures
+  order: 4
+  concept_ids:
+  - network-throughput
+  - min-cut-throughput
+  - link-utilization
+  - three-point-packet-capture
+concepts:
+- id: network-throughput
+  code: CN-CO1.4.1
+  title: Network Throughput
+  session: 3
+  skilling_exp: 2
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - end-to-end-delay-equation
+  eli5: Throughput is how much useful data gets through in a certain time. It is like counting how many boxes arrive
+    at a shop every minute, not how fast one truck can drive.
+  key_points:
+  - Throughput is a data-delivery rate over a defined interval.
+  - Goodput counts useful application data and excludes protocol overhead and retransmitted data.
+  - The measured rate depends on the path and workload.
+  - Always state whether the metric is throughput or goodput.
+  deep_dive: 'Throughput measures the rate at which data is successfully delivered over a network during a specified
+    interval. The exact definition must be stated: raw link throughput may include protocol overhead, while application
+    goodput counts useful application payload delivered to the destination. Throughput is not automatically equal
+    to the nominal capacity printed on a link because the path may contain slower links, contention, protocol overhead,
+    loss, or endpoint limitations. A measurement should identify the endpoints, direction, time interval, payload
+    accounting method, and test conditions. Short tests can be distorted by startup effects and bursts; longer tests
+    can reveal sustained performance. The CO1 outcome asks students to analyze throughput using measured network
+    data and account for transfer timing. In the handout''s 1.2 MB transfer-stop scenario, throughput measurements
+    should be paired with evidence from the path and endpoints rather than treated as a single diagnosis. Report
+    units consistently, such as Mb/s for bits per second or MB/s for bytes per second.'
+  formulas:
+  - id: throughput
+    latex: T=\frac{D}{\Delta t}
+    vars:
+      T: throughput in bytes/s or bits/s, consistent with D
+      D: amount of data delivered
+      \Delta t: measurement interval in seconds
+    example: If 12 MB (12,000,000 bytes) is delivered in 2 s, throughput is 6 MB/s or 48 Mb/s.
+  viz:
+    type: bar_compare
+    description: Adjust delivered data and observe network throughput as the selected network condition changes.
+    params:
+    - name: delivered
+      label: Delivered data
+      min: 0
+      max: 1000
+      step: 10
+      default: 100
+      unit: MB
+    compute:
+      throughput: delivered / 10
+    outcomes:
+    - when: delivered >= 1
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: delivered > 0 && delivered < 1
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: delivered == 0
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        delivered: 100
+      lesson: A positive delivered amount produces a measurable rate over a defined interval.
+    - set:
+        delivered: 0.5
+      lesson: Very little data was delivered; inspect whether the interval or transfer is incomplete.
+    - set:
+        delivered: 0
+      lesson: No delivered data means measured throughput is zero for this interval.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of network throughput?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Measure or simulate a transfer, record bytes delivered and elapsed seconds, and calculate throughput
+    and application goodput separately.
+- id: min-cut-throughput
+  code: CN-CO1.4.2
+  title: Throughput as the Path Min-Cut
+  session: 3
+  skilling_exp: 2
+  btl: 4
+  difficulty: 2
+  prereqs:
+  - network-throughput
+  eli5: 'Water flowing through several pipes can move only as fast as the narrowest pipe allows. A network path
+    is similar: its slowest capacity limit can restrict the whole transfer.'
+  key_points:
+  - A path contains links or resources with finite capacities.
+  - The bottleneck limits the maximum sustainable end-to-end rate.
+  - For a simple serial path, the upper bound is no greater than the smallest link capacity.
+  - Other limits such as hosts, protocol behavior, and loss can reduce measured throughput further.
+  deep_dive: 'The min-cut view explains why end-to-end throughput is constrained by the capacity of the narrowest
+    cut separating sender and receiver. In a simple path consisting of serial links, the smallest link capacity
+    is the bottleneck upper bound. More generally, a cut is a set of links whose removal separates the source from
+    the destination, and its total capacity bounds the flow. This is a network-flow perspective: the maximum possible
+    flow cannot exceed the capacity of any separating cut. Real measured throughput may be lower because of protocol
+    overhead, congestion, endpoint limitations, retransmissions, or competing traffic. It cannot exceed the bottleneck
+    bound under the same direction and accounting assumptions. To use this idea in troubleshooting, compare capacities
+    at each point on the path and measure where traffic rate changes. The handout''s CO1 indicator explicitly names
+    throughput as min-cut and asks students to evaluate it using packet captures.'
+  formulas:
+  - id: mincut
+    latex: T_{max}\leq \min(C_1,C_2,\ldots,C_n)
+    vars:
+      T_{max: maximum end-to-end throughput bound
+      C_i: capacity of path link i
+    example: For serial links of 100, 40, and 1000 Mb/s, the path capacity upper bound is min(100,40,1000)=40 Mb/s.
+  viz:
+    type: topology_graph
+    description: Adjust bottleneck capacity and observe throughput as the path min-cut as the selected network condition
+      changes.
+    params:
+    - name: bottleneck
+      label: Bottleneck capacity
+      min: 1
+      max: 1000
+      step: 1
+      default: 100
+      unit: Mb/s
+    compute:
+      path_bound: min(bottleneck, 1000)
+    outcomes:
+    - when: bottleneck >= 100
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: bottleneck >= 20 && bottleneck < 100
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: bottleneck < 20
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        bottleneck: 100
+      lesson: The modeled path can support up to 100 Mb/s before other constraints.
+    - set:
+        bottleneck: 40
+      lesson: A 40 Mb/s bottleneck caps the path even if other links are faster.
+    - set:
+        bottleneck: 5
+      lesson: A very low-capacity segment strongly restricts the transfer.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of throughput as the path min-cut?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Given three serial link capacities of 1 Gb/s, 100 Mb/s, and 40 Mb/s, identify the min-cut bound and
+    explain why a 1 Gb/s access link cannot deliver 1 Gb/s end-to-end.
+- id: link-utilization
+  code: CN-CO1.4.3
+  title: Link Utilization
+  session: 3
+  skilling_exp: 3
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - network-throughput
+  eli5: Utilization tells us how busy a road or checkout counter is compared with its full working capacity. A link
+    at 50% utilization has more spare capacity than one at 98%.
+  key_points:
+  - Utilization compares offered or carried load with available capacity.
+  - State whether utilization is measured as traffic rate divided by link rate.
+  - High utilization leaves less room for bursts.
+  - High utilization alone does not prove a fault; delay and loss must also be examined.
+  deep_dive: 'Link utilization is the fraction of a link''s capacity being used over a defined interval. A common
+    estimate divides the observed traffic rate by the link''s nominal rate, using the same direction and units.
+    Utilization is useful for identifying busy links and understanding available headroom. However, an average utilization
+    value can hide short bursts, directional asymmetry, or queue buildup. A link may show a moderate long-term average
+    while experiencing brief periods of saturation. Conversely, high utilization may be expected and acceptable
+    if latency and loss remain within the service target. CO1 connects utilization to the queueing-delay knee: as
+    demand approaches capacity, queues can become much more sensitive to bursts. Measurement should therefore pair
+    utilization with queue depth, delay percentiles, and packet loss. The handout''s dashboard scenario warns that
+    green summary indicators can coexist with user-visible faults, so the chosen metric and aggregation interval
+    matter.'
+  formulas:
+  - id: util_ratio
+    latex: U=\frac{R_{observed}}{C_{link}}\times 100\%
+    vars:
+      U: link utilization in percent
+      R_{observed: observed traffic rate
+      C_{link: link capacity
+    example: An observed 800 Mb/s on a 1 Gb/s link gives U=800/1000×100=80%.
+  viz:
+    type: bar_compare
+    description: Adjust utilization and observe link utilization as the selected network condition changes.
+    params:
+    - name: utilization
+      label: Utilization
+      min: 0
+      max: 1
+      step: 0.01
+      default: 0.5
+      unit: ratio
+    compute:
+      percent: utilization * 100
+    outcomes:
+    - when: utilization <= 0.7
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: utilization > 0.7 && utilization <= 0.9
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: utilization > 0.9
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        utilization: 0.5
+      lesson: Half the link capacity is in use, leaving substantial headroom.
+    - set:
+        utilization: 0.8
+      lesson: The link is busy and queueing sensitivity may be increasing.
+    - set:
+        utilization: 0.98
+      lesson: The link is near saturation; bursts can produce queue growth and loss.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of link utilization?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Calculate utilization for 250 Mb/s traffic on a 1 Gb/s link and explain why a 1-minute average may
+    hide a 10-second burst.
+- id: three-point-packet-capture
+  code: CN-CO1.4.4
+  title: Three-Point Packet Capture
+  session: 3
+  skilling_exp: 2
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - encapsulation-process
+  - network-throughput
+  - end-to-end-delay-equation
+  eli5: Imagine checking a parcel at the warehouse, at the city sorting centre, and at the local delivery shop.
+    Comparing the three checks shows where it was delayed, changed, or lost.
+  key_points:
+  - Capture at three defined points along the same path.
+  - Compare timestamps, packet identifiers, sizes, sequence or flow information, and direction.
+  - A packet visible at one point but absent at the next narrows the fault location.
+  - Clock synchronization and capture placement affect conclusions.
+  deep_dive: A three-point capture compares packet observations at three locations along a network path, such as
+    near the sender, at an intermediate point, and near the receiver. The purpose is to localize where packet timing,
+    size, order, or presence changes. Match packets using suitable identifiers and protocol fields, and account
+    for transformations such as NAT, tunneling, or offload behavior that can change what a capture displays. Timestamp
+    comparison requires clocks that are sufficiently synchronized; otherwise apparent delay differences may be clock
+    error. Capture points should be documented precisely, including interface, direction, and whether traffic is
+    observed before or after a queue or policy device. The handout defines a dedicated Three-Point Capture skilling
+    experiment to understand packet flow and identify performance differences. A strong analysis does not simply
+    say 'the packet is missing'; it shows the last point where it was observed and the next point where it was not,
+    then proposes a testable fault boundary.
+  formulas: []
+  viz:
+    type: packet_flow
+    description: Adjust missing packets between capture points and observe three-point packet capture as the selected
+      network condition changes.
+    params:
+    - name: capture_gap
+      label: Missing packets between capture points
+      min: 0
+      max: 100
+      step: 1
+      default: 0
+      unit: packets
+    compute:
+      observed: 100 - capture_gap
+    outcomes:
+    - when: capture_gap <= 5
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: capture_gap > 5 && capture_gap <= 20
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: capture_gap > 20
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        capture_gap: 0
+      lesson: All modeled packets are observed at each point.
+    - set:
+        capture_gap: 10
+      lesson: A moderate gap requires checking loss, filtering, and capture placement.
+    - set:
+        capture_gap: 40
+      lesson: A large gap strongly suggests a path segment or capture configuration problem.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of three-point packet capture?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Plan three capture locations for a client-to-server transfer. List the fields you would use to match
+    packets and one limitation of timestamp comparison.

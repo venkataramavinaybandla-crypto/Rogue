@@ -1,0 +1,223 @@
+part:
+  id: co3_05
+  co: CO-3
+  title: Route Selection, Convergence and Dual-Uplink Failover
+  order: 5
+  concept_ids:
+  - co3-route-selection
+  - co3-route-failover-dual-uplink
+concepts:
+- id: co3-route-selection
+  code: CN-CO3.5.1
+  title: Route Selection and Routing Policy
+  session: 11
+  skilling_exp: 16
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co3-longest-prefix-arp
+  - co3-link-state-spf-ospf
+  eli5: Routers can learn several possible routes to the same destination. Route selection decides which route is
+    installed and used.
+  key_points:
+  - Longest-prefix match chooses among matching prefixes in the forwarding lookup.
+  - Route selection between candidate routes can use protocol-specific preference and metrics.
+  - Administrative distance or preference is implementation-specific and is not the same as prefix length.
+  - OSPF uses its path cost to choose among OSPF routes.
+  - BGP policy and attributes influence inter-domain path selection.
+  deep_dive: 'Route selection happens at more than one level. A router first learns candidate routes from connected
+    networks, static configuration and routing protocols. It applies its implementation''s route preference rules
+    and protocol metrics to decide which candidate enters the routing table. When forwarding a packet, the router
+    then applies longest-prefix match among installed prefixes. These are related but distinct decisions: a route
+    with a more preferred protocol may win for one prefix, while a more-specific prefix can still win for a particular
+    destination. OSPF uses accumulated interface cost to select an intra-domain path. BGP uses path attributes and
+    policy rather than simply choosing the route with the fewest physical hops. Operationally, inspect the candidate
+    routes, the selected route and the forwarding lookup separately. In a dual-uplink campus, route policy must
+    be designed so that the preferred path and failover path behave as intended, including the return direction.'
+  formulas:
+  - id: route_cost_sum
+    latex: C_{route}=\sum_i c_i
+    vars:
+      C_route: total route metric for a path
+      c_i: metric contribution of link i
+    example: A three-link OSPF path with costs 10, 10 and 5 has total cost 25.
+  viz:
+    type: bar_compare
+    description: Compare route cost values for candidate paths.
+    params:
+    - name: candidate_cost
+      label: Candidate path cost
+      min: 1
+      max: 500
+      step: 1
+      default: 25
+      unit: cost units
+    compute:
+      relative_cost: candidate_cost
+    outcomes:
+    - when: candidate_cost <= 25
+      title: Lower illustrative cost
+      explain: This candidate has a relatively low cost in this comparison; evaluate it against alternatives and
+        policy.
+      severity: info
+    - when: candidate_cost > 25 && candidate_cost <= 100
+      title: Moderate illustrative cost
+      explain: Compare the metric and protocol preference with other candidate routes.
+      severity: info
+    - when: candidate_cost > 100
+      title: Higher illustrative cost
+      explain: This path may be less preferred under a lower-cost-is-better metric such as OSPF cost.
+      severity: warn
+    combos_to_try:
+    - set:
+        candidate_cost: 15
+      lesson: A lower OSPF cost can be preferred among comparable OSPF routes.
+    - set:
+        candidate_cost: 50
+      lesson: A moderate cost must be compared with competing candidates.
+    - set:
+        candidate_cost: 200
+      lesson: A high cost may lose to a lower-cost alternate path.
+  common_mistakes:
+  - Confusing longest-prefix match with route preference between protocols.
+  - Assuming BGP always selects the path with the fewest routers.
+  - Comparing metrics from different protocols as if they had identical meanings.
+  quiz:
+  - q: What does longest-prefix match decide?
+    options:
+    - Which installed matching prefix applies to a destination
+    - Which routing protocol starts first
+    - Which DHCP pool is selected
+    - Which Ethernet frame has the lowest CRC
+    answer: 0
+    why: LPM selects the most specific matching route for the destination.
+  - q: What is OSPF's path metric based on?
+    options:
+    - Accumulated link cost
+    - DNS TTL
+    - TCP window size
+    - IPv4 broadcast address
+    answer: 0
+    why: OSPF computes path cost from interface/link costs.
+  - q: Why should BGP policy not be reduced to hop count alone?
+    options:
+    - BGP path attributes and policy affect route selection
+    - BGP uses only ARP replies
+    - BGP does not carry reachability information
+    - BGP is an Ethernet switching protocol
+    answer: 0
+    why: BGP path selection considers attributes and configured policy.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Given connected, static, OSPF and BGP candidate routes, document which route is selected for the routing
+    table and which prefix wins for a specific destination.
+- id: co3-route-failover-dual-uplink
+  code: CN-CO3.5.2
+  title: Dual-Uplink Failover Without Black-Holing
+  session: 12
+  skilling_exp: 16
+  btl: 5
+  difficulty: 3
+  prereqs:
+  - co3-route-selection
+  - co3-ospf-convergence-budget
+  eli5: A dual-uplink network has two ways out. If one link fails, traffic should move to the other path instead
+    of disappearing into a dead route.
+  key_points:
+  - A dual-uplink design provides a primary and alternate upstream path.
+  - Failure detection and route withdrawal must remove or de-preference the unusable path.
+  - Forward and return paths both matter; asymmetric routing may expose stateful-device issues.
+  - Black-holing occurs when traffic is sent toward a path that cannot deliver it.
+  - Test both normal operation and controlled failure, including traffic continuity and recovery time.
+  deep_dive: 'A dual-uplink campus connects to two upstream paths so that a single provider or link failure does
+    not isolate the site. The design must specify which uplink is preferred during normal operation and how the
+    alternate becomes active after failure. Routing protocols or tracking mechanisms must detect the failed path
+    and withdraw or de-preference routes that are no longer usable. A stale default route can create a black hole:
+    the router continues forwarding traffic toward an upstream next hop that cannot deliver it. A successful failover
+    test therefore checks more than link status. Generate traffic to a known destination, fail the primary uplink,
+    observe route changes, confirm packets use the alternate, and measure loss and recovery time. Also test the
+    reverse direction and consider stateful firewalls or NAT devices that may depend on symmetric paths. The handout
+    explicitly requires a second uplink without black-holing, so the test should demonstrate working traffic through
+    both the normal and failure states.'
+  formulas:
+  - id: failover_loss
+    latex: Loss\% = 100\times\frac{N_{sent}-N_{received}}{N_{sent}}
+    vars:
+      N_sent: number of test packets sent
+      N_received: number of test packets received
+    example: If 1000 packets are sent and 980 arrive, loss = 100×20/1000 = 2%.
+  viz:
+    type: timeline
+    description: Measure packet loss during a controlled primary-uplink failure.
+    params:
+    - name: lost_packets
+      label: Packets lost during failover
+      min: 0
+      max: 100
+      step: 1
+      default: 2
+      unit: packets per 1000
+    compute:
+      loss_percent: lost_packets/10
+    outcomes:
+    - when: lost_packets <= 5
+      title: Low failover loss
+      explain: The illustrative loss is at or below 0.5%; confirm the path remains stable after failover.
+      severity: info
+    - when: lost_packets > 5 && lost_packets <= 30
+      title: Noticeable failover loss
+      explain: Inspect detection time, route withdrawal and alternate-path installation.
+      severity: warn
+    - when: lost_packets > 30
+      title: Failover disruption
+      explain: The loss suggests a significant interruption or black-hole during the transition.
+      severity: fail
+    combos_to_try:
+    - set:
+        lost_packets: 0
+      lesson: Zero loss is ideal but still verify the alternate route is active.
+    - set:
+        lost_packets: 10
+      lesson: A 1% loss event warrants timing and route-state inspection.
+    - set:
+        lost_packets: 60
+      lesson: A 6% loss event indicates substantial disruption.
+  common_mistakes:
+  - Testing only the physical link state without testing traffic.
+  - Ignoring the return path and stateful middleboxes.
+  - Leaving a stale default route active after the primary path fails.
+  quiz:
+  - q: What is a routing black hole?
+    options:
+    - Traffic is forwarded toward a path that cannot deliver it
+    - A router has too many DNS records
+    - A switch learns a MAC address
+    - A host receives a DHCP ACK
+    answer: 0
+    why: A black hole silently loses traffic because the selected path is unusable.
+  - q: What should a dual-uplink failover test include?
+    options:
+    - Controlled link failure and end-to-end traffic verification
+    - Only a screenshot of the interface state
+    - Only a ping to the local gateway
+    - A DNS zone transfer without traffic
+    answer: 0
+    why: Traffic must be shown to move to the alternate path.
+  - q: Why test the return direction as well?
+    options:
+    - Asymmetric paths can affect stateful devices and end-to-end communication
+    - IP packets never have a destination
+    - BGP does not support multiple paths
+    - ARP only works in one direction
+    answer: 0
+    why: The reverse path may be different and can break stateful flows.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Run a continuous traffic test across a campus dual-uplink topology. Disable the primary uplink, record
+    route changes, packet loss and recovery time, then verify the return path.

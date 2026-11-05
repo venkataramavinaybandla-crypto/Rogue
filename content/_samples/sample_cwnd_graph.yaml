@@ -1,0 +1,32 @@
+part:
+  id: sample-part-04
+  co: CO-1
+  title: Sample TCP Congestion Window Test
+  order: 103
+  concept_ids:
+    - cwnd_graph-sample-test
+concepts:
+  - id: cwnd_graph-sample-test
+    code: "TEST-CWND_GRAPH"
+    title: "TCP Congestion Window Test"
+    session: 1
+    skilling_exp: 1
+    btl: 3
+    difficulty: 2
+    prereqs: []
+    eli5: "Interactive verification suite for cwnd_graph visualizer in Rogue telemetry system."
+    key_points:
+      - "Driven strictly by params, values, outputs, outcomes contract."
+      - "Features live bidirectional interaction and animation."
+    deep_dive: "Detailed operational verification of cwnd_graph component under Rogue dashboard engine."
+    formulas: []
+    viz:
+      type: "cwnd_graph"
+      description: "Sample test suite for cwnd_graph"
+      params: [{"name":"cwnd","label":"Congestion Window","min":2,"max":64,"step":2,"default":16,"unit":"MSS"}]
+      compute: {"flight_bytes":"cwnd * 1460"}
+      outcomes: [{"when":"cwnd >= 32","title":"High In-flight Pipe Fill","explain":"Operating at high link bandwidth.","severity":"info"},{"when":"cwnd < 8","title":"Window Collapsed","explain":"Packet loss forced window backoff.","severity":"fail"}]
+      combos_to_try: [{"set":{"cwnd":48},"lesson":"High throughput pipeline fill."}]
+    common_mistakes: []
+    quiz: []
+    exam_tags: ["diagnostic", "sample"]

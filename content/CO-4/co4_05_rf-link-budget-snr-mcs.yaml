@@ -1,0 +1,347 @@
+part:
+  id: co4_05
+  co: CO-4
+  title: RF Link Budgets, SNR and MCS
+  order: 5
+  concept_ids:
+  - co4-rf-link-budget
+  - co4-snr-data-rate
+  - co4-mcs-ladder
+concepts:
+- id: co4-rf-link-budget
+  code: CN-CO4.05.1
+  title: Wireless RF Link Budget
+  session: 15
+  skilling_exp: 19
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co4-physical-media-budgets
+  - co4-shannon-capacity
+  eli5: An RF link budget adds transmit power and antenna gains, then subtracts path and other losses to estimate
+    the signal arriving at the receiver.
+  key_points:
+  - RF budgets commonly use dB and dBm quantities.
+  - Transmit power and antenna gains improve the received-power estimate.
+  - Path loss and obstacles reduce received power.
+  - Receiver sensitivity and required margin determine link viability.
+  - Frequency, distance, antenna placement and environment affect the RF path.
+  deep_dive: 'Wireless RF Link Budget is part of RF Link Budgets, SNR and MCS in CO-4, whose focus is to analyze
+    link- and physical-layer behaviour and diagnose faults that may not produce an explicit error message. The central
+    idea is to connect the protocol mechanism to observable network behaviour rather than memorise a definition.
+    In a practical investigation, first state the expected behaviour, identify the relevant frame, link, signal
+    or airtime measurement, and record a baseline before changing configuration. Then vary one factor at a time
+    and compare the result with the expected model. The formula supplied with this concept is a compact engineering
+    model: identify each variable, keep units consistent, substitute measured or stated values, and explain what
+    the result does and does not prove. The visualization is intended for controlled exploration; it simplifies
+    real device behaviour and is not a complete simulator of vendor-specific implementations. When diagnosing a
+    fault, correlate counters and packet observations at both ends of the link, check configuration symmetry, and
+    distinguish physical impairment from a Layer-2 forwarding or shared-medium problem. Finally, document the evidence,
+    the single change made, the expected impact and the verification result. This method matters because a link
+    can remain administratively up while corruption, contention, poor signal margin, loops or airtime imbalance
+    make service unusable.'
+  formulas:
+  - id: co4-rf-link-budget-formula
+    latex: P_rx = P_tx + G_tx + G_rx - L_path - L_misc
+    vars: 'P_rx: received dBm; P_tx: transmit dBm; G_tx/G_rx: antenna gains dB; L_path/L_misc: losses dB'
+    example: 20 dBm transmit, 3 dB gain at each antenna, 100 dB path loss and 2 dB other loss gives -76 dBm.
+  viz:
+    type: bar_compare
+    description: Explore the main variables associated with wireless rf link budget and compare the simplified model
+      with a measured network result.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified visualization.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying network condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Start with a baseline where Input A is twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed outcome.
+  common_mistakes:
+  - Mixing dBm absolute power with dB gain/loss.
+  - Ignoring fade margin and environmental variation.
+  - Assuming high transmit power alone guarantees reliability.
+  quiz:
+  - q: What is the main purpose of Wireless RF Link Budget?
+    options:
+    - To understand or operate wireless rf link budget
+    - To encrypt all application data
+    - To replace IP routing
+    - To guarantee zero packet loss
+    answer: 0
+    why: This concept addresses the specific link-layer or physical-layer mechanism named in the question.
+  - q: Which diagnostic approach is most reliable for a silent network fault?
+    options:
+    - Change several settings at once
+    - Collect measurements, test one hypothesis and verify the result
+    - Assume link-up proves service health
+    - Ignore counters and rely only on user reports
+    answer: 1
+    why: A falsifiable hypothesis and controlled test isolate causes while preserving evidence.
+  - q: Which statement best describes a simplified engineering model?
+    options:
+    - It reproduces every vendor implementation exactly
+    - It removes the need for packet captures
+    - It explains selected relationships but must be checked against measurements
+    - It proves every fault has one cause
+    answer: 2
+    why: Models clarify relationships, but real devices and environments must still be measured.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small test or calculation for wireless rf link budget; record the expected result, observed
+    evidence, one controlled change and a verification result.
+- id: co4-snr-data-rate
+  code: CN-CO4.05.2
+  title: Signal-to-Noise Ratio and Data Rate
+  session: 15
+  skilling_exp: 19
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co4-rf-link-budget
+  eli5: SNR compares useful signal power with background noise. A cleaner signal generally allows a wireless system
+    to use faster transmission modes.
+  key_points:
+  - SNR is a ratio between received signal power and noise power.
+  - SNR in decibels is 10 log10 of the power ratio.
+  - Higher SNR can support higher modulation and coding rates, subject to implementation.
+  - Interference can reduce effective signal quality even when signal strength looks strong.
+  - Interpret SNR alongside channel width, noise floor, retries and airtime.
+  deep_dive: 'Signal-to-Noise Ratio and Data Rate is part of RF Link Budgets, SNR and MCS in CO-4, whose focus is
+    to analyze link- and physical-layer behaviour and diagnose faults that may not produce an explicit error message.
+    The central idea is to connect the protocol mechanism to observable network behaviour rather than memorise a
+    definition. In a practical investigation, first state the expected behaviour, identify the relevant frame, link,
+    signal or airtime measurement, and record a baseline before changing configuration. Then vary one factor at
+    a time and compare the result with the expected model. The formula supplied with this concept is a compact engineering
+    model: identify each variable, keep units consistent, substitute measured or stated values, and explain what
+    the result does and does not prove. The visualization is intended for controlled exploration; it simplifies
+    real device behaviour and is not a complete simulator of vendor-specific implementations. When diagnosing a
+    fault, correlate counters and packet observations at both ends of the link, check configuration symmetry, and
+    distinguish physical impairment from a Layer-2 forwarding or shared-medium problem. Finally, document the evidence,
+    the single change made, the expected impact and the verification result. This method matters because a link
+    can remain administratively up while corruption, contention, poor signal margin, loops or airtime imbalance
+    make service unusable.'
+  formulas:
+  - id: co4-snr-data-rate-formula
+    latex: SNR_dB = 10*log10(P_s/P_n)
+    vars: 'SNR_dB: ratio in dB; P_s: signal power; P_n: noise power'
+    example: If signal power is 100 times noise power, SNR=10 log10(100)=20 dB.
+  viz:
+    type: bar_compare
+    description: Explore the main variables associated with signal-to-noise ratio and data rate and compare the
+      simplified model with a measured network result.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified visualization.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying network condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Start with a baseline where Input A is twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed outcome.
+  common_mistakes:
+  - Using 20 log10 for a power ratio.
+  - Treating RSSI and SNR as interchangeable.
+  - Ignoring interference and channel occupancy.
+  quiz:
+  - q: What is the main purpose of Signal-to-Noise Ratio and Data Rate?
+    options:
+    - To understand or operate signal-to-noise ratio and data rate
+    - To encrypt all application data
+    - To replace IP routing
+    - To guarantee zero packet loss
+    answer: 0
+    why: This concept addresses the specific link-layer or physical-layer mechanism named in the question.
+  - q: Which diagnostic approach is most reliable for a silent network fault?
+    options:
+    - Change several settings at once
+    - Collect measurements, test one hypothesis and verify the result
+    - Assume link-up proves service health
+    - Ignore counters and rely only on user reports
+    answer: 1
+    why: A falsifiable hypothesis and controlled test isolate causes while preserving evidence.
+  - q: Which statement best describes a simplified engineering model?
+    options:
+    - It reproduces every vendor implementation exactly
+    - It removes the need for packet captures
+    - It explains selected relationships but must be checked against measurements
+    - It proves every fault has one cause
+    answer: 2
+    why: Models clarify relationships, but real devices and environments must still be measured.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small test or calculation for signal-to-noise ratio and data rate; record the expected result,
+    observed evidence, one controlled change and a verification result.
+- id: co4-mcs-ladder
+  code: CN-CO4.05.3
+  title: Modulation and Coding Scheme (MCS) Ladder
+  session: 16
+  skilling_exp: 19
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co4-snr-data-rate
+  eli5: An MCS is a combination of modulation and coding choices. Wireless devices move up or down an MCS ladder
+    as signal conditions change.
+  key_points:
+  - An MCS identifies a modulation and coding combination.
+  - Higher-order modulation carries more bits per symbol but needs cleaner signal conditions.
+  - Coding adds redundancy for robustness but consumes capacity.
+  - Rate adaptation selects a mode based on channel conditions and policy.
+  - Advertised PHY rate is not application throughput.
+  deep_dive: 'Modulation and Coding Scheme (MCS) Ladder is part of RF Link Budgets, SNR and MCS in CO-4, whose focus
+    is to analyze link- and physical-layer behaviour and diagnose faults that may not produce an explicit error
+    message. The central idea is to connect the protocol mechanism to observable network behaviour rather than memorise
+    a definition. In a practical investigation, first state the expected behaviour, identify the relevant frame,
+    link, signal or airtime measurement, and record a baseline before changing configuration. Then vary one factor
+    at a time and compare the result with the expected model. The formula supplied with this concept is a compact
+    engineering model: identify each variable, keep units consistent, substitute measured or stated values, and
+    explain what the result does and does not prove. The visualization is intended for controlled exploration; it
+    simplifies real device behaviour and is not a complete simulator of vendor-specific implementations. When diagnosing
+    a fault, correlate counters and packet observations at both ends of the link, check configuration symmetry,
+    and distinguish physical impairment from a Layer-2 forwarding or shared-medium problem. Finally, document the
+    evidence, the single change made, the expected impact and the verification result. This method matters because
+    a link can remain administratively up while corruption, contention, poor signal margin, loops or airtime imbalance
+    make service unusable.'
+  formulas:
+  - id: co4-mcs-ladder-formula
+    latex: G ~= R_PHY * eta
+    vars: 'G: estimated goodput; R_PHY: physical rate; eta: efficiency factor'
+    example: A 600 Mbit/s PHY rate at 60% illustrative efficiency gives about 360 Mbit/s goodput.
+  viz:
+    type: bar_compare
+    description: Explore the main variables associated with modulation and coding scheme (mcs) ladder and compare
+      the simplified model with a measured network result.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified visualization.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying network condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Start with a baseline where Input A is twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed outcome.
+  common_mistakes:
+  - Equating MCS or PHY rate with application throughput.
+  - Assuming a fixed MCS is optimal under changing RF conditions.
+  - Ignoring retries, contention and protocol overhead.
+  quiz:
+  - q: What is the main purpose of Modulation and Coding Scheme (MCS) Ladder?
+    options:
+    - To understand or operate modulation and coding scheme (mcs) ladder
+    - To encrypt all application data
+    - To replace IP routing
+    - To guarantee zero packet loss
+    answer: 0
+    why: This concept addresses the specific link-layer or physical-layer mechanism named in the question.
+  - q: Which diagnostic approach is most reliable for a silent network fault?
+    options:
+    - Change several settings at once
+    - Collect measurements, test one hypothesis and verify the result
+    - Assume link-up proves service health
+    - Ignore counters and rely only on user reports
+    answer: 1
+    why: A falsifiable hypothesis and controlled test isolate causes while preserving evidence.
+  - q: Which statement best describes a simplified engineering model?
+    options:
+    - It reproduces every vendor implementation exactly
+    - It removes the need for packet captures
+    - It explains selected relationships but must be checked against measurements
+    - It proves every fault has one cause
+    answer: 2
+    why: Models clarify relationships, but real devices and environments must still be measured.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small test or calculation for modulation and coding scheme (mcs) ladder; record the expected
+    result, observed evidence, one controlled change and a verification result.

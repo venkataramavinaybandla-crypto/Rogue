@@ -1,0 +1,457 @@
+part:
+  id: co2-06
+  co: CO-2
+  title: Retransmission Timers and Loss Recovery
+  order: 6
+  concept_ids:
+  - co2-tcp-retransmission-timers
+  - co2-rto-estimation
+  - co2-packet-loss-detection
+  - co2-fast-retransmit-loss-recovery
+concepts:
+- id: co2-tcp-retransmission-timers
+  code: CN-CO2.6.1
+  title: TCP retransmission timers
+  session: 8
+  skilling_exp: 10
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co2-tcp-sequence-numbers
+  eli5: A retransmission timer helps TCP decide when unacknowledged data may need to be sent again.
+  key_points:
+  - TCP tracks data that has been sent but not yet acknowledged.
+  - A retransmission timeout triggers recovery when acknowledgement progress does not arrive in time.
+  - The timeout must account for changing network round-trip times.
+  - A timer that is too short can cause unnecessary retransmissions.
+  - A timer that is too long can delay recovery from real loss.
+  deep_dive: 'TCP retransmission timers provide a fallback mechanism when sent data is not acknowledged.
+    After transmitting data, the sender tracks outstanding sequence ranges and waits for acknowledgement
+    progress. If the retransmission timeout expires before the expected acknowledgement arrives, the sender
+    can retransmit the outstanding data. Choosing the timeout involves a trade-off: a value that is too
+    small may trigger needless retransmissions when the network is merely delayed, while a value that
+    is too large can make genuine loss recovery slow. TCP therefore estimates round-trip timing and adapts
+    its retransmission timeout rather than using one arbitrary fixed delay. Timer management must also
+    account for retransmission ambiguity and backoff after repeated timeout events. The experiment focuses
+    on deriving an RTO from measured timing rather than memorizing a single universal constant. RTO is
+    adaptive: it should reflect measured RTT variation and back off when repeated timeouts occur.'
+  formulas: []
+  viz:
+    type: timeline
+    description: Compare a selected timeout with an observed acknowledgement delay.
+    params:
+    - name: rto_ms
+      label: Retransmission timeout
+      min: 1
+      max: 5000
+      step: 1
+      default: 300
+      unit: ms
+    - name: ack_delay_ms
+      label: Observed ACK delay
+      min: 1
+      max: 5000
+      step: 1
+      default: 180
+      unit: ms
+    compute:
+      timeout_margin_ms: rto_ms - ack_delay_ms
+    outcomes:
+    - when: rto_ms > ack_delay_ms && rto_ms - ack_delay_ms >= 100
+      title: Timeout has margin
+      explain: The acknowledgement arrives before the timeout with at least 100 ms margin.
+      severity: info
+    - when: rto_ms >= ack_delay_ms && rto_ms - ack_delay_ms < 100
+      title: Narrow margin
+      explain: The ACK arrives just before timeout; variation could trigger a spurious timeout.
+      severity: warn
+    - when: rto_ms < ack_delay_ms
+      title: Timeout too short for this sample
+      explain: The timer expires before the observed ACK delay.
+      severity: fail
+    combos_to_try:
+    - set:
+        rto_ms: 300
+        ack_delay_ms: 180
+      lesson: The ACK arrives with 120 ms margin.
+    - set:
+        rto_ms: 200
+        ack_delay_ms: 180
+      lesson: The margin is narrow.
+    - set:
+        rto_ms: 100
+        ack_delay_ms: 180
+      lesson: The timer expires before this sample's ACK.
+  common_mistakes:
+  - Using one fixed RTO for every network path.
+  - Ignoring RTT variation.
+  - Assuming every timeout proves packet loss.
+  quiz:
+  - q: 'What happens when the retransmission timer expires? '
+    options:
+    - TCP may retransmit outstanding data
+    - DNS TTL resets
+    - HTTP headers are deleted
+    - The socket becomes UDP
+    answer: 0
+    why: An RTO expiry triggers retransmission recovery.
+  - q: 'What can an RTO that is too short cause? '
+    options:
+    - Spurious retransmissions
+    - Permanent cache entries
+    - Guaranteed lower latency
+    - No acknowledgements
+    answer: 0
+    why: A short RTO can mistake delay for loss.
+  - q: 'Why does TCP adapt its RTO? '
+    options:
+    - Network RTT varies
+    - HTTP methods change
+    - UDP preserves order
+    - TLS uses ports
+    answer: 0
+    why: The timer should reflect measured round-trip behaviour.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Given a sequence of RTT samples, calculate an RTO estimate and explain why a fixed timeout
+    is risky.
+- id: co2-rto-estimation
+  code: CN-CO2.6.2
+  title: RTO estimation from RTT samples
+  session: 8
+  skilling_exp: 10
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co2-tcp-retransmission-timers
+  eli5: RTO estimation uses smoothed RTT and variation to avoid reacting to every noisy sample.
+  key_points:
+  - RTT samples vary from packet to packet.
+  - Smoothed RTT tracks a weighted history of measurements.
+  - RTT variation estimates how much samples fluctuate.
+  - The retransmission timeout includes a margin based on variation.
+  - The first sample and later samples use different initialization/update handling.
+  deep_dive: An adaptive retransmission timeout uses measured RTT rather than a fixed guess. TCP maintains
+    a smoothed RTT estimate that gives recent observations influence while retaining history, and it maintains
+    an estimate of RTT variation. A common conceptual form is RTO = SRTT + max(G, 4 × RTTVAR), where G
+    represents timer granularity. The exact update rules initialize estimates from the first valid sample
+    and then update them as new samples arrive. This margin helps accommodate ordinary timing variation
+    so that a delayed acknowledgement is not immediately mistaken for loss. When a retransmission occurs,
+    the original transmission's RTT is ambiguous, so implementations avoid treating the retransmitted
+    segment's acknowledgement as an ordinary clean RTT sample. Repeated timeout events also use exponential
+    backoff. The course experiment should show how an estimator reacts to stable versus variable RTT samples.
+    Smoothed RTT tracks central tendency; RTTVAR supplies a safety margin for timing variation.
+  formulas: []
+  viz:
+    type: queue_curve
+    description: Compute a simplified RTO from SRTT and RTT variation.
+    params:
+    - name: srtt_ms
+      label: Smoothed RTT
+      min: 1
+      max: 2000
+      step: 1
+      default: 100
+      unit: ms
+    - name: rttvar_ms
+      label: RTT variation
+      min: 0
+      max: 1000
+      step: 1
+      default: 20
+      unit: ms
+    - name: granularity_ms
+      label: Timer granularity
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: ms
+    compute:
+      rto_ms: srtt_ms + max(granularity_ms, 4 * rttvar_ms)
+    outcomes:
+    - when: rto_ms <= 250
+      title: Compact timeout estimate
+      explain: The calculated illustrative RTO is at most 250 ms.
+      severity: info
+    - when: rto_ms > 250 && rto_ms <= 1000
+      title: Moderate timeout estimate
+      explain: The variation margin produces a larger RTO.
+      severity: warn
+    - when: rto_ms > 1000
+      title: Large timeout estimate
+      explain: The selected RTT or variation implies a long timeout estimate.
+      severity: fail
+    combos_to_try:
+    - set:
+        srtt_ms: 100
+        rttvar_ms: 20
+        granularity_ms: 10
+      lesson: RTO is 180 ms.
+    - set:
+        srtt_ms: 200
+        rttvar_ms: 100
+        granularity_ms: 10
+      lesson: Variation increases the timeout margin.
+    - set:
+        srtt_ms: 800
+        rttvar_ms: 100
+        granularity_ms: 10
+      lesson: The estimated RTO exceeds one second.
+  common_mistakes:
+  - Using only the latest RTT sample.
+  - Forgetting the variation term.
+  - Treating the formula as a substitute for TCP's full update and backoff rules.
+  quiz:
+  - q: 'What does SRTT represent? '
+    options:
+    - Smoothed round-trip time
+    - Socket receive thread
+    - Sequence retransmission total
+    - Server response transfer time
+    answer: 0
+    why: SRTT is the smoothed RTT estimate.
+  - q: 'Why is RTTVAR included? '
+    options:
+    - To represent RTT variation
+    - To count HTTP headers
+    - To store DNS records
+    - To set the receive window
+    answer: 0
+    why: RTTVAR helps provide a margin for timing variation.
+  - q: 'What is the simplified RTO expression used here? '
+    options:
+    - SRTT + max(G, 4×RTTVAR)
+    - SRTT − RTTVAR
+    - 4×MSS only
+    - cwnd / MSS
+    answer: 0
+    why: The estimator adds a variation-based margin to SRTT.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Calculate RTO for three RTT sample sets and compare how variation changes the result.
+- id: co2-packet-loss-detection
+  code: CN-CO2.6.3
+  title: Packet-loss detection
+  session: 8
+  skilling_exp: 10
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co2-tcp-sequence-numbers
+  - co2-tcp-retransmission-timers
+  eli5: TCP infers loss from missing acknowledgement progress or an expired retransmission timer.
+  key_points:
+  - A missing segment can create a gap in the receiver's byte stream.
+  - Duplicate ACKs can indicate that later data arrived beyond a gap.
+  - A retransmission timeout is a loss-recovery signal.
+  - Reordering can resemble loss temporarily.
+  - Loss detection must tolerate delay and reordering.
+  deep_dive: TCP cannot directly observe a packet disappearing inside the network. Instead, it infers
+    loss from transport feedback. If a segment is missing but later segments arrive, the receiver may
+    repeatedly acknowledge the next byte it still expects. Duplicate acknowledgements can therefore indicate
+    a gap in the sequence space. If acknowledgement progress does not arrive before the retransmission
+    timer expires, the sender has another signal that recovery is needed. However, packet reordering and
+    variable delay can produce patterns that resemble loss even when a segment is merely late. Loss detection
+    must balance responsiveness against spurious retransmissions. Packet traces should be interpreted
+    using sequence numbers, acknowledgement numbers, timing and the surrounding segments rather than one
+    isolated ACK. This distinction prepares the implementation for fast retransmit and timeout-based recovery.
+    Duplicate ACKs suggest a gap; an RTO indicates that acknowledgement progress did not arrive in time.
+  formulas: []
+  viz:
+    type: timeline
+    description: Compare duplicate ACK evidence and timeout evidence.
+    params:
+    - name: duplicate_acks
+      label: Duplicate ACK count
+      min: 0
+      max: 20
+      step: 1
+      default: 3
+      unit: ACKs
+    - name: rto_expired
+      label: RTO expired
+      min: 0
+      max: 1
+      step: 1
+      default: 0
+      unit: 0=no, 1=yes
+    compute:
+      loss_evidence_score: duplicate_acks + 10 * rto_expired
+    outcomes:
+    - when: rto_expired == 1
+      title: Timeout signal observed
+      explain: The retransmission timer expired without the expected progress.
+      severity: fail
+    - when: rto_expired == 0 && duplicate_acks >= 3
+      title: Duplicate ACK threshold reached
+      explain: Multiple duplicate ACKs suggest a missing sequence range.
+      severity: warn
+    - when: rto_expired == 0 && duplicate_acks < 3
+      title: Insufficient evidence in this example
+      explain: The selected feedback does not meet either illustrative trigger.
+      severity: info
+    combos_to_try:
+    - set:
+        duplicate_acks: 0
+        rto_expired: 0
+      lesson: No clear loss signal in this simplified view.
+    - set:
+        duplicate_acks: 3
+        rto_expired: 0
+      lesson: Duplicate ACKs indicate a likely gap.
+    - set:
+        duplicate_acks: 0
+        rto_expired: 1
+      lesson: The timer provides a timeout-based signal.
+  common_mistakes:
+  - Treating every duplicate ACK as proof of loss.
+  - Ignoring packet reordering.
+  - Waiting only for RTO when fast retransmit evidence exists.
+  quiz:
+  - q: 'What can duplicate ACKs indicate? '
+    options:
+    - A missing sequence range
+    - A DNS TTL refresh
+    - An HTTP status line
+    - A TLS certificate
+    answer: 0
+    why: Duplicate ACKs can indicate a gap in the byte stream.
+  - q: 'What is one alternative explanation for a missing segment pattern? '
+    options:
+    - Packet reordering
+    - HTTP content length
+    - ALPN selection
+    - Socket bind
+    answer: 0
+    why: Reordering can temporarily resemble loss.
+  - q: 'What does an expired RTO indicate? '
+    options:
+    - Expected ACK progress did not arrive in time
+    - The application framed a message
+    - DNS resolved twice
+    - The peer is definitely powered off
+    answer: 0
+    why: The timeout is a transport-level signal for recovery.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Annotate a packet trace and distinguish a likely loss event from a reordered segment.
+- id: co2-fast-retransmit-loss-recovery
+  code: CN-CO2.6.4
+  title: Fast retransmit and loss recovery
+  session: 8
+  skilling_exp: 10
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co2-packet-loss-detection
+  - co2-rto-estimation
+  eli5: Fast retransmit uses duplicate acknowledgements to recover without waiting for the retransmission
+    timeout.
+  key_points:
+  - Multiple duplicate ACKs can indicate a missing segment while later data is arriving.
+  - Fast retransmit resends the segment associated with the gap.
+  - Fast recovery adjusts congestion response after a fast retransmit.
+  - Timeout-based recovery is used when feedback does not arrive in time.
+  - Recovery behaviour must be considered alongside congestion control.
+  deep_dive: Fast retransmit uses duplicate acknowledgement feedback to react to a likely missing segment
+    before the retransmission timer expires. When later data reaches the receiver beyond a gap, the receiver
+    can continue acknowledging the next byte it expects. A run of duplicate ACKs gives the sender evidence
+    that the network is still delivering later segments and that one sequence range may be missing. The
+    sender can retransmit the missing data rather than waiting for an RTO. Fast recovery then governs
+    how the congestion window is adjusted while the sender recovers, avoiding a complete return to the
+    initial state in the classic Reno-style description. A timeout is a more severe signal and generally
+    causes a stronger congestion response. The exact congestion-control algorithm affects details, so
+    the course should distinguish the shared loss signal from the algorithm-specific response. Fast retransmit
+    reacts to duplicate ACK evidence; timeout recovery reacts to missing progress over time.
+  formulas: []
+  viz:
+    type: cwnd_graph
+    description: Compare recovery trigger with a simplified recovery delay.
+    params:
+    - name: rtt_ms
+      label: RTT
+      min: 1
+      max: 1000
+      step: 1
+      default: 50
+      unit: ms
+    - name: trigger
+      label: Recovery trigger
+      min: 0
+      max: 1
+      step: 1
+      default: 0
+      unit: 0=duplicate ACK, 1=timeout
+    compute:
+      recovery_wait_ms: rtt_ms * trigger
+    outcomes:
+    - when: trigger == 0
+      title: Fast retransmit path
+      explain: The example uses duplicate ACK evidence rather than waiting for an RTO.
+      severity: info
+    - when: trigger == 1 && rtt_ms <= 200
+      title: Timeout recovery path
+      explain: The timeout path is selected and incurs a longer recovery wait.
+      severity: warn
+    - when: trigger == 1 && rtt_ms > 200
+      title: Slow timeout recovery path
+      explain: The selected timeout path has a large RTT-based wait.
+      severity: fail
+    combos_to_try:
+    - set:
+        rtt_ms: 40
+        trigger: 0
+      lesson: Duplicate ACK evidence enables fast retransmit.
+    - set:
+        rtt_ms: 100
+        trigger: 1
+      lesson: Recovery waits for timeout in this simplified comparison.
+    - set:
+        rtt_ms: 500
+        trigger: 1
+      lesson: A long RTT makes timeout recovery more costly.
+  common_mistakes:
+  - Waiting for RTO despite sufficient duplicate ACK evidence.
+  - Treating fast retransmit as independent of congestion response.
+  - Assuming every TCP congestion algorithm has identical recovery details.
+  quiz:
+  - q: 'What is the main purpose of fast retransmit? '
+    options:
+    - Retransmit likely lost data before RTO
+    - Resolve DNS faster
+    - Frame HTTP messages
+    - Close a socket
+    answer: 0
+    why: Fast retransmit uses duplicate ACK evidence to avoid waiting for timeout.
+  - q: 'Which signal commonly triggers classic fast retransmit? '
+    options:
+    - Three duplicate ACKs
+    - A DNS TTL of three
+    - Three HTTP headers
+    - Three FIN flags
+    answer: 0
+    why: The classic trigger is three duplicate acknowledgements.
+  - q: 'How does timeout recovery generally compare with fast retransmit? '
+    options:
+    - It waits longer for missing ACK progress
+    - It never changes congestion state
+    - It is a DNS operation
+    - It is always faster
+    answer: 0
+    why: Timeout recovery waits for the retransmission timer to expire.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Simulate a missing segment and compare fast retransmit with timeout-based recovery.

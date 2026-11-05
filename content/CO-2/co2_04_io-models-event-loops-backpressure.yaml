@@ -1,0 +1,568 @@
+part:
+  id: co2-04
+  co: CO-2
+  title: I/O Models, Event Loops and Backpressure
+  order: 4
+  concept_ids:
+  - co2-blocking-io
+  - co2-thread-per-connection
+  - co2-select-poll
+  - co2-nonblocking-epoll-kqueue
+  - co2-event-loops-backpressure
+concepts:
+- id: co2-blocking-io
+  code: CN-CO2.4.1
+  title: Blocking I/O
+  session: 7
+  skilling_exp: 7
+  btl: 2
+  difficulty: 1
+  prereqs: []
+  eli5: With blocking I/O, a call can wait until data or an operation is ready.
+  key_points:
+  - A blocking read can wait for data to arrive.
+  - A blocked thread cannot perform unrelated work until the call returns.
+  - A simple blocking server can be easy to understand.
+  - Many blocked threads consume memory and scheduling resources.
+  - Timeouts help bound how long operations may wait.
+  deep_dive: Blocking I/O is a programming model in which an operation such as read() or accept() can
+    suspend the calling thread until it can make progress. A straightforward server may handle one client
+    at a time, or dedicate a thread to each connection. This model is easy to reason about initially because
+    the control flow resembles a sequence of operations. However, a thread waiting for one slow client
+    cannot perform unrelated work during that wait. A thread-per-connection design can therefore consume
+    substantial stack memory and scheduling resources as the number of concurrent clients grows. Timeouts
+    can prevent waits from continuing indefinitely, but they do not change the underlying blocking model.
+    The course compares blocking I/O with readiness-based mechanisms such as select, poll and epoll, emphasizing
+    both implementation complexity and resource budgets. Blocking simplifies control flow, but a waiting
+    thread still consumes resources.
+  formulas: []
+  viz:
+    type: bar_compare
+    description: Estimate memory used by one thread per connection.
+    params:
+    - name: connections
+      label: Concurrent connections
+      min: 1
+      max: 100000
+      step: 1
+      default: 1000
+      unit: connections
+    - name: stack_mb
+      label: Stack reservation per thread
+      min: 1
+      max: 64
+      step: 1
+      default: 8
+      unit: MB
+    compute:
+      reserved_mb: connections * stack_mb
+    outcomes:
+    - when: reserved_mb <= 1024
+      title: Within illustrative 1 GiB budget
+      explain: The estimated reserved stack memory is at most 1 GiB.
+      severity: info
+    - when: reserved_mb > 1024 && reserved_mb <= 8192
+      title: Large memory reservation
+      explain: The estimate exceeds 1 GiB but remains within 8 GiB.
+      severity: warn
+    - when: reserved_mb > 8192
+      title: Very large reservation
+      explain: The estimate exceeds 8 GiB and deserves architectural review.
+      severity: fail
+    combos_to_try:
+    - set:
+        connections: 100
+        stack_mb: 8
+      lesson: A modest thread count reserves 800 MB in this simplified estimate.
+    - set:
+        connections: 1000
+        stack_mb: 8
+      lesson: One thousand threads reserve 8 GiB in this estimate.
+    - set:
+        connections: 10000
+        stack_mb: 8
+      lesson: A thread-per-connection design becomes expensive at this scale.
+  common_mistakes:
+  - Assuming a blocked thread uses no memory.
+  - Confusing reserved stack size with actual resident usage.
+  - Assuming timeouts make a blocking design scalable by themselves.
+  quiz:
+  - q: 'What happens during a blocking read with no available data? '
+    options:
+    - It may wait
+    - It always returns all requested bytes
+    - It changes to UDP
+    - It performs DNS resolution
+    answer: 0
+    why: A blocking read can wait until data is available.
+  - q: 'What is a resource concern with one thread per connection? '
+    options:
+    - Thread memory and scheduling overhead
+    - Loss of TCP ordering
+    - DNS TTL growth
+    - HTTP header syntax
+    answer: 0
+    why: Many threads consume memory and scheduling resources.
+  - q: 'What can a timeout do? '
+    options:
+    - Bound waiting time
+    - Guarantee delivery
+    - Remove framing
+    - Replace accept()
+    answer: 0
+    why: Timeouts limit how long an operation waits.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Estimate thread stack reservation for several connection counts and compare it with a stated
+    memory budget.
+- id: co2-thread-per-connection
+  code: CN-CO2.4.2
+  title: Thread-per-connection architecture
+  session: 7
+  skilling_exp: 7
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co2-blocking-io
+  eli5: A thread-per-connection server assigns a separate execution thread to each client.
+  key_points:
+  - Each accepted client is handled by its own thread.
+  - The design keeps each connection's control flow relatively straightforward.
+  - Thread stacks and scheduling overhead grow with connection count.
+  - Slow clients can occupy threads while waiting.
+  - The memory-budget experiment makes this scaling cost measurable.
+  deep_dive: 'Thread-per-connection is a concurrency design in which the server creates or assigns a thread
+    to each accepted client. Each thread can use familiar blocking operations, which often makes request
+    handling easier to write and debug. The trade-off is resource growth: every thread requires scheduling
+    state and typically has a stack reservation, while large thread counts increase context switching
+    and operational complexity. A slow or idle client can occupy a thread even when it is not doing useful
+    work. The approach can be appropriate for moderate concurrency or when the runtime provides lightweight
+    threads, but the course''s ten-thousand-connection target motivates comparing it with event-driven
+    I/O. A memory budget should be explicit: estimate per-thread reservation, multiply by concurrent connections,
+    and then account for the rest of the process rather than assuming the thread stack is the only cost.
+    Thread-per-connection trades simple control flow for per-connection thread resources.'
+  formulas: []
+  viz:
+    type: bar_compare
+    description: Compute approximate thread stack reservation.
+    params:
+    - name: connections
+      label: Connections
+      min: 1
+      max: 50000
+      step: 1
+      default: 1000
+      unit: threads
+    - name: stack_mb
+      label: Stack per thread
+      min: 1
+      max: 32
+      step: 1
+      default: 4
+      unit: MB
+    compute:
+      stack_total_gb: connections * stack_mb / 1024
+    outcomes:
+    - when: stack_total_gb <= 1
+      title: Lower stack reservation
+      explain: The simplified stack estimate is at most 1 GiB.
+      severity: info
+    - when: stack_total_gb > 1 && stack_total_gb <= 8
+      title: Substantial reservation
+      explain: The estimate is between 1 and 8 GiB.
+      severity: warn
+    - when: stack_total_gb > 8
+      title: Very high reservation
+      explain: The estimate exceeds 8 GiB.
+      severity: fail
+    combos_to_try:
+    - set:
+        connections: 100
+        stack_mb: 4
+      lesson: Estimate 400 MB of stack reservation.
+    - set:
+        connections: 2000
+        stack_mb: 4
+      lesson: Estimate roughly 7.8 GiB.
+    - set:
+        connections: 10000
+        stack_mb: 4
+      lesson: The estimate is roughly 39 GiB.
+  common_mistakes:
+  - Equating thread count with active CPU work.
+  - Ignoring stack reservation and scheduler overhead.
+  - Claiming thread-per-connection can never be appropriate.
+  quiz:
+  - q: 'What is the defining feature of thread-per-connection? '
+    options:
+    - One thread handles each client
+    - One process handles all DNS
+    - One packet per thread
+    - One thread per HTTP header
+    answer: 0
+    why: Each accepted client is assigned a separate thread.
+  - q: 'Why can this model struggle at very high concurrency? '
+    options:
+    - Per-thread resource overhead
+    - TCP stops acknowledging
+    - HTTP becomes UDP
+    - DNS records become larger
+    answer: 0
+    why: Thread stacks and scheduling overhead grow with connections.
+  - q: 'What is the purpose of a memory budget analysis? '
+    options:
+    - Estimate resource cost at target concurrency
+    - Calculate DNS TTL
+    - Replace TCP sequence numbers
+    - Measure only CPU frequency
+    answer: 0
+    why: A budget makes the architecture's resource requirements explicit.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Compare the estimated memory cost of 100, 1,000 and 10,000 threads using a chosen stack reservation.
+- id: co2-select-poll
+  code: CN-CO2.4.3
+  title: select() and poll() readiness notification
+  session: 7
+  skilling_exp: 7
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co2-blocking-io
+  eli5: select() and poll() let one thread monitor multiple descriptors for readiness.
+  key_points:
+  - Readiness notification reports which descriptors may be ready for I/O.
+  - select() uses descriptor sets and has descriptor-range constraints on common systems.
+  - poll() uses an array of pollfd structures.
+  - The application still performs the actual read or write after readiness.
+  - Both commonly require scanning monitored descriptors as the set grows.
+  deep_dive: Readiness APIs allow a single thread to monitor multiple sockets rather than block separately
+    on each connection. select() reports readiness through descriptor sets and has practical descriptor-set
+    limits on common systems. poll() uses an array of pollfd structures and avoids select()'s fixed descriptor-set
+    representation, but an application still generally examines the returned entries. Readiness means
+    an operation is likely to make progress; it does not mean an entire application message is available
+    or that a write will accept every byte. The program must still handle partial I/O, errors and changing
+    connection state. As the monitored set grows, scanning and bookkeeping can become significant. These
+    APIs are useful stepping stones toward event-driven programming and provide a basis for comparing
+    the cost of readiness management with epoll or kqueue. Readiness tells the program where to try I/O;
+    it does not complete the I/O operation.
+  formulas: []
+  viz:
+    type: bar_compare
+    description: Compare a simple illustrative scan cost across monitored descriptors.
+    params:
+    - name: descriptors
+      label: Monitored descriptors
+      min: 1
+      max: 100000
+      step: 1
+      default: 1000
+      unit: descriptors
+    - name: checks_per_second
+      label: Scan cycles per second
+      min: 1
+      max: 10000
+      step: 1
+      default: 100
+      unit: cycles/s
+    compute:
+      checks_per_second_total: descriptors * checks_per_second
+    outcomes:
+    - when: checks_per_second_total <= 100000
+      title: Small scan workload
+      explain: The illustrative descriptor checks are at most 100,000 per second.
+      severity: info
+    - when: checks_per_second_total > 100000 && checks_per_second_total <= 5000000
+      title: Growing scan workload
+      explain: Descriptor scanning can become a visible cost.
+      severity: warn
+    - when: checks_per_second_total > 5000000
+      title: Large scan workload
+      explain: The illustrative scan count is high; compare event notification approaches.
+      severity: fail
+    combos_to_try:
+    - set:
+        descriptors: 100
+        checks_per_second: 100
+      lesson: A small monitored set.
+    - set:
+        descriptors: 1000
+        checks_per_second: 1000
+      lesson: A million checks per second in this simplified model.
+    - set:
+        descriptors: 10000
+        checks_per_second: 1000
+      lesson: Ten million checks per second motivates a different approach.
+  common_mistakes:
+  - Assuming readiness means a complete request is available.
+  - Treating select() and poll() as identical APIs.
+  - Ignoring descriptor-set and scanning costs.
+  quiz:
+  - q: 'What does readiness notification indicate? '
+    options:
+    - An operation may make progress
+    - A full HTTP message is guaranteed
+    - The peer is healthy forever
+    - The socket is closed
+    answer: 0
+    why: Readiness indicates that attempting I/O may make progress.
+  - q: 'Which API represents monitored descriptors using pollfd entries? '
+    options:
+    - poll()
+    - listen()
+    - bind()
+    - accept()
+    answer: 0
+    why: poll() uses an array of pollfd structures.
+  - q: 'What work remains after readiness is reported? '
+    options:
+    - The application performs and checks I/O
+    - The kernel parses HTTP
+    - DNS resolves automatically
+    - TLS is terminated automatically
+    answer: 0
+    why: The application still calls read/write and handles partial results.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small C readiness loop using select() or poll() and handle partial reads without
+    blocking the whole server.
+- id: co2-nonblocking-epoll-kqueue
+  code: CN-CO2.4.4
+  title: Non-blocking sockets, epoll and kqueue
+  session: 7
+  skilling_exp: 8
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co2-select-poll
+  eli5: Non-blocking sockets return control instead of waiting, while scalable event APIs report readiness.
+  key_points:
+  - A non-blocking operation returns promptly when it cannot proceed immediately.
+  - The program must handle EAGAIN or EWOULDBLOCK appropriately.
+  - epoll is a Linux readiness notification facility.
+  - kqueue is an event notification mechanism used on BSD-family systems and macOS.
+  - The application maintains connection state and drains ready sockets carefully.
+  deep_dive: 'Non-blocking sockets allow a server to attempt I/O without tying up a thread while a socket
+    would otherwise wait. If an operation cannot proceed, it returns an indication such as EAGAIN or EWOULDBLOCK,
+    and the application waits for another readiness event before retrying. Linux epoll and BSD-family
+    kqueue provide event notification mechanisms that are designed for managing many descriptors. They
+    differ in API and platform availability, so portable designs may need an abstraction layer. An event
+    notification does not replace the application''s protocol parser: the program still tracks partial
+    headers, payload lengths, output buffers and connection lifecycle. In edge-triggered use, the application
+    generally needs to continue reading or writing until the operation would block, otherwise it may fail
+    to drain available work. This part connects non-blocking socket mechanics to event-loop design and
+    high concurrency. Non-blocking I/O avoids waiting in the call; the event loop must preserve state
+    and retry correctly.'
+  formulas: []
+  viz:
+    type: custom
+    description: Estimate the number of ready events processed per loop.
+    params:
+    - name: ready_events
+      label: Ready events
+      min: 0
+      max: 100000
+      step: 1
+      default: 100
+      unit: events
+    - name: events_per_batch
+      label: Events per processing batch
+      min: 1
+      max: 10000
+      step: 1
+      default: 64
+      unit: events
+    compute:
+      batches: ceil(ready_events / events_per_batch)
+    outcomes:
+    - when: ready_events <= 100
+      title: Small event batch
+      explain: The event set is small in this example.
+      severity: info
+    - when: ready_events > 100 && ready_events <= 10000
+      title: Moderate event set
+      explain: The loop should process batches without starving other work.
+      severity: warn
+    - when: ready_events > 10000
+      title: Large event set
+      explain: Batching, fairness and backpressure become important.
+      severity: fail
+    combos_to_try:
+    - set:
+        ready_events: 32
+        events_per_batch: 64
+      lesson: One processing batch is sufficient.
+    - set:
+        ready_events: 5000
+        events_per_batch: 128
+      lesson: The loop must process multiple batches.
+    - set:
+        ready_events: 50000
+        events_per_batch: 256
+      lesson: Large event volumes need careful scheduling.
+  common_mistakes:
+  - Treating EAGAIN as a fatal connection error in all cases.
+  - Assuming epoll is available on every operating system.
+  - Failing to drain a socket in edge-triggered mode.
+  quiz:
+  - q: 'What does EAGAIN commonly indicate on a non-blocking socket? '
+    options:
+    - The operation would block
+    - The DNS name is invalid
+    - The peer sent FIN
+    - The TLS certificate expired
+    answer: 0
+    why: EAGAIN indicates the operation cannot make progress immediately.
+  - q: 'Which facility is associated with Linux event notification? '
+    options:
+    - epoll
+    - kqueue
+    - selectfd
+    - HTTP poll
+    answer: 0
+    why: epoll is the Linux event notification interface.
+  - q: 'Which platform family is associated with kqueue? '
+    options:
+    - BSD-family systems and macOS
+    - Only Windows
+    - Only Linux
+    - Only Android
+    answer: 0
+    why: kqueue is used on BSD-family systems and macOS.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Implement a non-blocking event loop that handles EAGAIN and preserves per-connection parser
+    state.
+- id: co2-event-loops-backpressure
+  code: CN-CO2.4.5
+  title: Event loops, C10K, multicore, timeouts and backpressure
+  session: 7
+  skilling_exp: 8
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co2-nonblocking-epoll-kqueue
+  eli5: An event loop multiplexes many connections, while backpressure prevents producers from overwhelming
+    consumers.
+  key_points:
+  - An event loop waits for readiness events and dispatches connection work.
+  - C10K describes the challenge of handling around ten thousand concurrent connections.
+  - Multicore systems require attention to event-loop placement and shared state.
+  - Timeouts bound idle or stalled operations.
+  - Backpressure limits queued work when a consumer cannot keep up with a producer.
+  deep_dive: 'An event loop centralizes readiness handling and dispatches work for many sockets without
+    requiring one blocked thread per connection. The C10K problem is a shorthand for the challenge of
+    supporting roughly ten thousand concurrent connections efficiently. Achieving that target is not just
+    a matter of selecting epoll or kqueue: memory per connection, output buffering, parsing cost, CPU
+    scheduling, multicore placement and timeout management all matter. Backpressure is the mechanism that
+    prevents an application from accepting unlimited work when a downstream consumer is slower. A server
+    can pause reads, cap per-connection output queues or reject work according to a defined policy. Timeouts
+    clean up connections that remain idle or stalled. The level-triggered and edge-triggered experiment
+    should connect notification semantics to queue growth and the need to drain ready sockets correctly.
+    High concurrency needs an entire resource policy: event notification, bounded queues, timeouts and
+    multicore-aware work.'
+  formulas: []
+  viz:
+    type: queue_curve
+    description: Compare incoming work with service capacity and a queue limit.
+    params:
+    - name: arrival_rate
+      label: Arrival rate
+      min: 1
+      max: 100000
+      step: 1
+      default: 1000
+      unit: items/s
+    - name: service_rate
+      label: Service rate
+      min: 1
+      max: 100000
+      step: 1
+      default: 1200
+      unit: items/s
+    - name: queue_limit
+      label: Queue limit
+      min: 1
+      max: 1000000
+      step: 1
+      default: 10000
+      unit: items
+    compute:
+      net_growth_per_s: arrival_rate - service_rate
+    outcomes:
+    - when: arrival_rate <= service_rate
+      title: Consumer keeps up
+      explain: The service rate is at least the arrival rate in this steady-rate model.
+      severity: info
+    - when: arrival_rate > service_rate && arrival_rate - service_rate <= queue_limit / 10
+      title: Queue grows slowly
+      explain: The queue grows while arrivals exceed service capacity.
+      severity: warn
+    - when: arrival_rate > service_rate && arrival_rate - service_rate > queue_limit / 10
+      title: Backpressure required
+      explain: The queue can consume a significant fraction of its limit quickly.
+      severity: fail
+    combos_to_try:
+    - set:
+        arrival_rate: 800
+        service_rate: 1200
+        queue_limit: 10000
+      lesson: Service capacity exceeds arrivals.
+    - set:
+        arrival_rate: 1300
+        service_rate: 1200
+        queue_limit: 10000
+      lesson: A small sustained excess accumulates.
+    - set:
+        arrival_rate: 5000
+        service_rate: 1000
+        queue_limit: 10000
+      lesson: A large excess rapidly fills the queue.
+  common_mistakes:
+  - Assuming event-driven automatically means unbounded scalability.
+  - Allowing output queues to grow without limit.
+  - Ignoring timeouts for idle or stalled clients.
+  quiz:
+  - q: 'What is backpressure intended to prevent? '
+    options:
+    - Unbounded producer-to-consumer queue growth
+    - TCP ordering
+    - DNS caching
+    - HTTP status codes
+    answer: 0
+    why: Backpressure limits work when downstream capacity is insufficient.
+  - q: 'What does C10K refer to? '
+    options:
+    - Around ten thousand concurrent connections
+    - Ten thousand DNS records
+    - Ten kilobytes of payload
+    - Ten TCP retransmissions
+    answer: 0
+    why: C10K is the challenge of handling roughly ten thousand concurrent connections.
+  - q: 'Why are timeouts useful in an event-driven server? '
+    options:
+    - They clean up stalled or idle connections
+    - They guarantee zero packet loss
+    - They replace framing
+    - They disable multicore
+    answer: 0
+    why: Timeouts bound how long resources remain tied to idle or stalled work.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Design an event-loop policy with per-connection queue limits, idle timeouts and a clear overload
+    response.

@@ -1,0 +1,32 @@
+part:
+  id: sample-part-08
+  co: CO-1
+  title: Sample Bit Matrix Frame & CRC Test
+  order: 107
+  concept_ids:
+    - bit_grid-sample-test
+concepts:
+  - id: bit_grid-sample-test
+    code: "TEST-BIT_GRID"
+    title: "Bit Matrix Frame & CRC Test"
+    session: 1
+    skilling_exp: 1
+    btl: 3
+    difficulty: 2
+    prereqs: []
+    eli5: "Interactive verification suite for bit_grid visualizer in Rogue telemetry system."
+    key_points:
+      - "Driven strictly by params, values, outputs, outcomes contract."
+      - "Features live bidirectional interaction and animation."
+    deep_dive: "Detailed operational verification of bit_grid component under Rogue dashboard engine."
+    formulas: []
+    viz:
+      type: "bit_grid"
+      description: "Sample test suite for bit_grid"
+      params: [{"name":"errors","label":"Bit Inversion Errors","min":0,"max":8,"step":1,"default":2,"unit":"bits"}]
+      compute: {"crc_fail":"errors > 0 ? 1 : 0"}
+      outcomes: [{"when":"errors > 0","title":"CRC Checksum Mismatch","explain":"Corrupted bits detected in frame.","severity":"fail"},{"when":"errors == 0","title":"Frame Integrity Verified","explain":"Checksum matches transmitted payload.","severity":"info"}]
+      combos_to_try: [{"set":{"errors":0},"lesson":"Clean frame with zero bit errors."}]
+    common_mistakes: []
+    quiz: []
+    exam_tags: ["diagnostic", "sample"]

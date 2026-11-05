@@ -1,0 +1,32 @@
+part:
+  id: sample-part-09
+  co: CO-1
+  title: Sample I/O Architecture Comparison Test
+  order: 108
+  concept_ids:
+    - bar_compare-sample-test
+concepts:
+  - id: bar_compare-sample-test
+    code: "TEST-BAR_COMPARE"
+    title: "I/O Architecture Comparison Test"
+    session: 1
+    skilling_exp: 1
+    btl: 3
+    difficulty: 2
+    prereqs: []
+    eli5: "Interactive verification suite for bar_compare visualizer in Rogue telemetry system."
+    key_points:
+      - "Driven strictly by params, values, outputs, outcomes contract."
+      - "Features live bidirectional interaction and animation."
+    deep_dive: "Detailed operational verification of bar_compare component under Rogue dashboard engine."
+    formulas: []
+    viz:
+      type: "bar_compare"
+      description: "Sample test suite for bar_compare"
+      params: [{"name":"mode","label":"Selected I/O Engine","min":0,"max":3,"step":1,"default":2,"unit":"mode"}]
+      compute: {"performance_score":"(mode + 1) * 25"}
+      outcomes: [{"when":"mode >= 2","title":"High-Concurrency Event Loop","explain":"Scales efficiently under load.","severity":"info"},{"when":"mode < 2","title":"Thread/Process Bottleneck","explain":"High context switch overhead.","severity":"warn"}]
+      combos_to_try: [{"set":{"mode":3},"lesson":"Select asynchronous completion I/O."}]
+    common_mistakes: []
+    quiz: []
+    exam_tags: ["diagnostic", "sample"]

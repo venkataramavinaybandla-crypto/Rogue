@@ -1,0 +1,32 @@
+part:
+  id: sample-part-06
+  co: CO-1
+  title: Sample 3D/2D Mesh Topology Test
+  order: 105
+  concept_ids:
+    - topology_graph-sample-test
+concepts:
+  - id: topology_graph-sample-test
+    code: "TEST-TOPOLOGY_GRAPH"
+    title: "3D/2D Mesh Topology Test"
+    session: 1
+    skilling_exp: 1
+    btl: 3
+    difficulty: 2
+    prereqs: []
+    eli5: "Interactive verification suite for topology_graph visualizer in Rogue telemetry system."
+    key_points:
+      - "Driven strictly by params, values, outputs, outcomes contract."
+      - "Features live bidirectional interaction and animation."
+    deep_dive: "Detailed operational verification of topology_graph component under Rogue dashboard engine."
+    formulas: []
+    viz:
+      type: "topology_graph"
+      description: "Sample test suite for topology_graph"
+      params: [{"name":"nodes","label":"Active Mesh Nodes","min":3,"max":5,"step":1,"default":5,"unit":"nodes"}]
+      compute: {"mesh_links":"nodes * (nodes - 1) / 2"}
+      outcomes: [{"when":"nodes == 5","title":"Full Redundant Mesh","explain":"All backbone links operational.","severity":"info"},{"when":"nodes < 4","title":"Redundancy Degraded","explain":"Critical path single-point of failure.","severity":"warn"}]
+      combos_to_try: [{"set":{"nodes":3},"lesson":"Degraded topology minimum graph."}]
+    common_mistakes: []
+    quiz: []
+    exam_tags: ["diagnostic", "sample"]

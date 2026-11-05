@@ -1,0 +1,346 @@
+part:
+  id: co4_06
+  co: CO-4
+  title: CSMA Airtime, Roaming and Constrained Links
+  order: 6
+  concept_ids:
+  - co4-csma-ca
+  - co4-airtime-fairness-channel-planning
+  - co4-roaming-constrained-links
+concepts:
+- id: co4-csma-ca
+  code: CN-CO4.06.1
+  title: CSMA/CA and the Hidden-Node Problem
+  session: 16
+  skilling_exp: 19
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co4-mcs-ladder
+  eli5: Wi-Fi devices listen before transmitting and use collision-avoidance rules. A hidden node cannot hear another
+    sender, so both may transmit to the same access point.
+  key_points:
+  - CSMA/CA uses carrier sensing and contention to reduce collision probability.
+  - Wireless devices share a channel and cannot always detect collisions while transmitting.
+  - A hidden node may be outside another sender's sensing range but still reach the same receiver.
+  - RTS/CTS can help reserve airtime in some hidden-node scenarios, with overhead.
+  - Retries and contention consume airtime even when payload is not delivered.
+  deep_dive: 'CSMA/CA and the Hidden-Node Problem is part of CSMA Airtime, Roaming and Constrained Links in CO-4,
+    whose focus is to analyze link- and physical-layer behaviour and diagnose faults that may not produce an explicit
+    error message. The central idea is to connect the protocol mechanism to observable network behaviour rather
+    than memorise a definition. In a practical investigation, first state the expected behaviour, identify the relevant
+    frame, link, signal or airtime measurement, and record a baseline before changing configuration. Then vary one
+    factor at a time and compare the result with the expected model. The formula supplied with this concept is a
+    compact engineering model: identify each variable, keep units consistent, substitute measured or stated values,
+    and explain what the result does and does not prove. The visualization is intended for controlled exploration;
+    it simplifies real device behaviour and is not a complete simulator of vendor-specific implementations. When
+    diagnosing a fault, correlate counters and packet observations at both ends of the link, check configuration
+    symmetry, and distinguish physical impairment from a Layer-2 forwarding or shared-medium problem. Finally, document
+    the evidence, the single change made, the expected impact and the verification result. This method matters because
+    a link can remain administratively up while corruption, contention, poor signal margin, loops or airtime imbalance
+    make service unusable.'
+  formulas:
+  - id: co4-csma-ca-formula
+    latex: A_i = (T_i / T_total) * 100%
+    vars: 'A_i: airtime share; T_i: device transmission time; T_total: measured channel time'
+    example: A station occupying 30 ms of a 100 ms interval uses 30% of observed airtime.
+  viz:
+    type: wireless_map
+    description: Explore the main variables associated with csma/ca and the hidden-node problem and compare the
+      simplified model with a measured network result.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified visualization.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying network condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Start with a baseline where Input A is twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed outcome.
+  common_mistakes:
+  - Assuming Wi-Fi uses Ethernet-style collision detection.
+  - Assuming every station can hear every other station.
+  - Ignoring RTS/CTS overhead.
+  quiz:
+  - q: What is the main purpose of CSMA/CA and the Hidden-Node Problem?
+    options:
+    - To understand or operate csma/ca and the hidden-node problem
+    - To encrypt all application data
+    - To replace IP routing
+    - To guarantee zero packet loss
+    answer: 0
+    why: This concept addresses the specific link-layer or physical-layer mechanism named in the question.
+  - q: Which diagnostic approach is most reliable for a silent network fault?
+    options:
+    - Change several settings at once
+    - Collect measurements, test one hypothesis and verify the result
+    - Assume link-up proves service health
+    - Ignore counters and rely only on user reports
+    answer: 1
+    why: A falsifiable hypothesis and controlled test isolate causes while preserving evidence.
+  - q: Which statement best describes a simplified engineering model?
+    options:
+    - It reproduces every vendor implementation exactly
+    - It removes the need for packet captures
+    - It explains selected relationships but must be checked against measurements
+    - It proves every fault has one cause
+    answer: 2
+    why: Models clarify relationships, but real devices and environments must still be measured.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small test or calculation for csma/ca and the hidden-node problem; record the expected result,
+    observed evidence, one controlled change and a verification result.
+- id: co4-airtime-fairness-channel-planning
+  code: CN-CO4.06.2
+  title: Airtime, Channel Planning and Fairness
+  session: 16
+  skilling_exp: 20
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co4-csma-ca
+  eli5: Wi-Fi performance depends on how long devices occupy the shared channel, not just their advertised speed.
+    Channel planning reduces interference and helps distribute airtime.
+  key_points:
+  - Airtime is consumed by transmissions, contention and retries.
+  - A slow station can occupy disproportionate airtime for the same payload volume.
+  - Channel planning considers band, channel width, neighbouring networks and reuse.
+  - Airtime fairness aims to prevent one station from dominating access.
+  - Wi-Fi 6/7 improve efficiency and capability but do not remove RF contention.
+  deep_dive: 'Airtime, Channel Planning and Fairness is part of CSMA Airtime, Roaming and Constrained Links in CO-4,
+    whose focus is to analyze link- and physical-layer behaviour and diagnose faults that may not produce an explicit
+    error message. The central idea is to connect the protocol mechanism to observable network behaviour rather
+    than memorise a definition. In a practical investigation, first state the expected behaviour, identify the relevant
+    frame, link, signal or airtime measurement, and record a baseline before changing configuration. Then vary one
+    factor at a time and compare the result with the expected model. The formula supplied with this concept is a
+    compact engineering model: identify each variable, keep units consistent, substitute measured or stated values,
+    and explain what the result does and does not prove. The visualization is intended for controlled exploration;
+    it simplifies real device behaviour and is not a complete simulator of vendor-specific implementations. When
+    diagnosing a fault, correlate counters and packet observations at both ends of the link, check configuration
+    symmetry, and distinguish physical impairment from a Layer-2 forwarding or shared-medium problem. Finally, document
+    the evidence, the single change made, the expected impact and the verification result. This method matters because
+    a link can remain administratively up while corruption, contention, poor signal margin, loops or airtime imbalance
+    make service unusable.'
+  formulas:
+  - id: co4-airtime-fairness-channel-planning-formula
+    latex: U = (T_busy / T_observed) * 100%
+    vars: 'U: channel utilization; T_busy: busy time; T_observed: observation interval'
+    example: A channel busy for 75 ms during a 100 ms sample has 75% utilization.
+  viz:
+    type: bar_compare
+    description: Explore the main variables associated with airtime, channel planning and fairness and compare the
+      simplified model with a measured network result.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified visualization.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying network condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Start with a baseline where Input A is twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed outcome.
+  common_mistakes:
+  - Using PHY rate alone to judge Wi-Fi capacity.
+  - Assuming adding access points always improves performance.
+  - Ignoring neighbouring networks and airtime consumed by retries.
+  quiz:
+  - q: What is the main purpose of Airtime, Channel Planning and Fairness?
+    options:
+    - To understand or operate airtime, channel planning and fairness
+    - To encrypt all application data
+    - To replace IP routing
+    - To guarantee zero packet loss
+    answer: 0
+    why: This concept addresses the specific link-layer or physical-layer mechanism named in the question.
+  - q: Which diagnostic approach is most reliable for a silent network fault?
+    options:
+    - Change several settings at once
+    - Collect measurements, test one hypothesis and verify the result
+    - Assume link-up proves service health
+    - Ignore counters and rely only on user reports
+    answer: 1
+    why: A falsifiable hypothesis and controlled test isolate causes while preserving evidence.
+  - q: Which statement best describes a simplified engineering model?
+    options:
+    - It reproduces every vendor implementation exactly
+    - It removes the need for packet captures
+    - It explains selected relationships but must be checked against measurements
+    - It proves every fault has one cause
+    answer: 2
+    why: Models clarify relationships, but real devices and environments must still be measured.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small test or calculation for airtime, channel planning and fairness; record the expected result,
+    observed evidence, one controlled change and a verification result.
+- id: co4-roaming-constrained-links
+  code: CN-CO4.06.3
+  title: Roaming and Constrained Low-Power Links
+  session: 16
+  skilling_exp: 20
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co4-airtime-fairness-channel-planning
+  eli5: Roaming lets a wireless client move between access points. Constrained low-power links have tight limits
+    on packet size, airtime, energy and duty cycle.
+  key_points:
+  - Roaming depends on client behaviour, signal quality, coverage and configuration.
+  - Poor overlap or sticky-client behaviour can cause interruption during movement.
+  - Roaming assistance depends on client and infrastructure support.
+  - Constrained links may have small MTUs, low data rates, duty-cycle limits and limited energy.
+  - Fragmentation, retransmissions and oversized packets are costly on constrained links.
+  deep_dive: 'Roaming and Constrained Low-Power Links is part of CSMA Airtime, Roaming and Constrained Links in
+    CO-4, whose focus is to analyze link- and physical-layer behaviour and diagnose faults that may not produce
+    an explicit error message. The central idea is to connect the protocol mechanism to observable network behaviour
+    rather than memorise a definition. In a practical investigation, first state the expected behaviour, identify
+    the relevant frame, link, signal or airtime measurement, and record a baseline before changing configuration.
+    Then vary one factor at a time and compare the result with the expected model. The formula supplied with this
+    concept is a compact engineering model: identify each variable, keep units consistent, substitute measured or
+    stated values, and explain what the result does and does not prove. The visualization is intended for controlled
+    exploration; it simplifies real device behaviour and is not a complete simulator of vendor-specific implementations.
+    When diagnosing a fault, correlate counters and packet observations at both ends of the link, check configuration
+    symmetry, and distinguish physical impairment from a Layer-2 forwarding or shared-medium problem. Finally, document
+    the evidence, the single change made, the expected impact and the verification result. This method matters because
+    a link can remain administratively up while corruption, contention, poor signal margin, loops or airtime imbalance
+    make service unusable.'
+  formulas:
+  - id: co4-roaming-constrained-links-formula
+    latex: N_fragments = ceil(L_payload / M_payload)
+    vars: 'N_fragments: fragment count; L_payload: payload length; M_payload: maximum fragment payload'
+    example: A 500-byte payload with a 120-byte fragment limit requires ceil(500/120)=5 fragments.
+  viz:
+    type: wireless_map
+    description: Explore the main variables associated with roaming and constrained low-power links and compare
+      the simplified model with a measured network result.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified visualization.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying network condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Start with a baseline where Input A is twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed outcome.
+  common_mistakes:
+  - Assuming roaming is controlled only by the access point.
+  - Ignoring client compatibility and transition interruption.
+  - Treating fragmentation as free of airtime and energy cost.
+  quiz:
+  - q: What is the main purpose of Roaming and Constrained Low-Power Links?
+    options:
+    - To understand or operate roaming and constrained low-power links
+    - To encrypt all application data
+    - To replace IP routing
+    - To guarantee zero packet loss
+    answer: 0
+    why: This concept addresses the specific link-layer or physical-layer mechanism named in the question.
+  - q: Which diagnostic approach is most reliable for a silent network fault?
+    options:
+    - Change several settings at once
+    - Collect measurements, test one hypothesis and verify the result
+    - Assume link-up proves service health
+    - Ignore counters and rely only on user reports
+    answer: 1
+    why: A falsifiable hypothesis and controlled test isolate causes while preserving evidence.
+  - q: Which statement best describes a simplified engineering model?
+    options:
+    - It reproduces every vendor implementation exactly
+    - It removes the need for packet captures
+    - It explains selected relationships but must be checked against measurements
+    - It proves every fault has one cause
+    answer: 2
+    why: Models clarify relationships, but real devices and environments must still be measured.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small test or calculation for roaming and constrained low-power links; record the expected
+    result, observed evidence, one controlled change and a verification result.

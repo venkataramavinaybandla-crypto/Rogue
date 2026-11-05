@@ -1,0 +1,331 @@
+part:
+  id: co3_04
+  co: CO-3
+  title: Distance-Vector, Link-State and OSPF
+  order: 4
+  concept_ids:
+  - co3-distance-vector-count-infinity
+  - co3-link-state-spf-ospf
+  - co3-ospf-convergence-budget
+concepts:
+- id: co3-distance-vector-count-infinity
+  code: CN-CO3.4.1
+  title: Distance-Vector Routing and Count-to-Infinity
+  session: 11
+  skilling_exp: 15
+  btl: 4
+  difficulty: 3
+  prereqs: []
+  eli5: Distance-vector routers share what they know about distances to destinations. A bad update can make routers
+    slowly believe a broken path is still reachable.
+  key_points:
+  - A distance-vector router advertises destination reachability and a metric to neighbours.
+  - Routers update routes using information received from adjacent routers.
+  - A failure can cause stale routes to circulate and metrics to increase gradually.
+  - Count-to-infinity is a slow-convergence routing loop problem in distance-vector protocols.
+  - Mitigations include split horizon, route poisoning and triggered updates; exact support depends on the protocol.
+  deep_dive: Distance-vector routing distributes reachability information between neighbouring routers. Each router
+    maintains a destination and metric view and uses neighbour advertisements to update its own table. This approach
+    is straightforward, but a link failure can leave neighbouring routers with stale information about an alternate
+    path. They may repeatedly advertise increasing distances to one another, creating the count-to-infinity problem.
+    The network can take an extended time to recognize that a destination is unreachable, and packets may loop during
+    the process. Split horizon avoids advertising a route back through the interface from which it was learned;
+    poisoned reverse advertises that route as unreachable to that neighbour. Route poisoning and triggered updates
+    can accelerate failure notification. These techniques reduce the risk or duration of loops, but they do not
+    remove the need to understand the protocol's metric and convergence behaviour. The skilling experiment explicitly
+    asks learners to demonstrate count-to-infinity and examine mitigation strategies.
+  formulas:
+  - id: metric_increase
+    latex: d_{new}=d_{neighbor}+c
+    vars:
+      d_new: candidate distance through a neighbour
+      d_neighbor: neighbour-advertised distance
+      c: cost of the local link
+    example: If a neighbour advertises metric 4 and the local link cost is 1, the candidate metric is 5.
+  viz:
+    type: timeline
+    description: Illustrate how a stale distance-vector advertisement can increase a metric after failure.
+    params:
+    - name: advertised_metric
+      label: Advertised metric
+      min: 1
+      max: 16
+      step: 1
+      default: 5
+      unit: metric
+    compute:
+      candidate_metric: advertised_metric+1
+    outcomes:
+    - when: advertised_metric < 8
+      title: Finite advertised distance
+      explain: The neighbour still advertises a finite path; verify that the path is not stale after a failure.
+      severity: warn
+    - when: advertised_metric >= 8 && advertised_metric < 16
+      title: Metric increasing
+      explain: Increasing metrics can indicate slow count-to-infinity behaviour in a bounded-metric protocol.
+      severity: warn
+    - when: advertised_metric == 16
+      title: Unreachable metric
+      explain: In the illustrative RIP-style metric, 16 represents infinity/unreachable.
+      severity: fail
+    combos_to_try:
+    - set:
+        advertised_metric: 2
+      lesson: A low metric can still be stale if its path has failed.
+    - set:
+        advertised_metric: 10
+      lesson: Repeated stale updates can increase the metric.
+    - set:
+        advertised_metric: 16
+      lesson: For RIP, metric 16 means unreachable.
+  common_mistakes:
+  - Assuming a low metric guarantees a live path.
+  - Confusing count-to-infinity with OSPF SPF computation.
+  - Assuming every distance-vector protocol uses RIP's metric limit of 16.
+  quiz:
+  - q: What is count-to-infinity?
+    options:
+    - A routing failure where stale distance information increases gradually
+    - A method for assigning IPv6 addresses
+    - A technique for calculating CRC
+    - A form of NAT
+    answer: 0
+    why: Stale neighbour information can cause metrics to rise slowly after a failure.
+  - q: What does split horizon do?
+    options:
+    - Prevents advertising a route back on the interface it was learned from
+    - Advertises every route to every neighbour
+    - Changes IPv4 addresses into MAC addresses
+    - Forces all routes to use the default gateway
+    answer: 0
+    why: Split horizon reduces routing loops by suppressing that advertisement.
+  - q: In RIP, what does metric 16 indicate?
+    options:
+    - Unreachable
+    - One hop
+    - Best possible route
+    - A 16-bit address
+    answer: 0
+    why: RIP uses 16 as its infinity metric.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a three-router distance-vector example, remove one link, record the changing metrics, and compare
+    the result with split horizon or route poisoning enabled.
+- id: co3-link-state-spf-ospf
+  code: CN-CO3.4.2
+  title: Link-State Routing, SPF and OSPF
+  session: 11
+  skilling_exp: 15
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co3-distance-vector-count-infinity
+  eli5: Link-state routers build a shared map of the network and calculate shortest paths from that map. OSPF is
+    a link-state routing protocol.
+  key_points:
+  - Routers distribute link-state information describing local links and costs.
+  - Routers build a link-state database representing the topology within an area.
+  - Shortest Path First (SPF) computes a shortest-path tree from the router to destinations.
+  - OSPF uses areas and a link-state database to support scalable routing.
+  - A topology change triggers database updates and route recalculation.
+  deep_dive: In link-state routing, routers advertise information about their directly connected links so that routers
+    in the same routing domain can build a consistent topology database. Each router independently runs a shortest-path-first
+    algorithm on that database to calculate its own best paths. OSPF is a widely used link-state interior gateway
+    protocol. It uses areas to organize topology information and supports hierarchical design, with Area 0 serving
+    as the backbone area in a conventional multi-area deployment. Link costs influence path selection, and a topology
+    change causes link-state information to be flooded and SPF calculations to run. This is different from distance-vector
+    routing, where routers exchange destination metrics with neighbours rather than building a complete link-state
+    map. When diagnosing OSPF, check adjacency formation, area and network configuration, database synchronization,
+    interface costs and the resulting route. The CO-3 outcome requires a convergence target, so the design must
+    measure not only the computed path but also the time from failure detection to stable forwarding.
+  formulas:
+  - id: path_cost
+    latex: C_{path}=\sum_{e\in path}c_e
+    vars:
+      C_path: total path cost
+      c_e: cost of each link in the path
+    example: A path with link costs 10, 5 and 5 has total cost 20.
+  viz:
+    type: topology_graph
+    description: Compare candidate paths by adding the link costs along each path.
+    params:
+    - name: link_cost
+      label: Cost of each equal-cost hop
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: cost units
+    compute:
+      three_hop_cost: 3*link_cost
+    outcomes:
+    - when: link_cost <= 10
+      title: Lower link cost
+      explain: This illustrative path receives a relatively low total cost for three equal-cost hops.
+      severity: info
+    - when: link_cost > 10 && link_cost <= 50
+      title: Moderate link cost
+      explain: Compare the total with alternate paths before selecting a route.
+      severity: info
+    - when: link_cost > 50
+      title: High link cost
+      explain: A competing path may be preferred if it has a lower accumulated cost.
+      severity: warn
+    combos_to_try:
+    - set:
+        link_cost: 5
+      lesson: Three equal links sum to cost 15.
+    - set:
+        link_cost: 10
+      lesson: Three equal links sum to cost 30.
+    - set:
+        link_cost: 80
+      lesson: A high cost can make an alternate path more attractive.
+  common_mistakes:
+  - Calling OSPF a distance-vector protocol.
+  - Assuming the shortest physical distance always has the lowest OSPF cost.
+  - Ignoring area and adjacency mismatches when troubleshooting.
+  quiz:
+  - q: What information do link-state routers distribute?
+    options:
+    - Information about their directly connected links and costs
+    - Only a default gateway address
+    - Application-layer DNS records
+    - TCP sequence numbers
+    answer: 0
+    why: Link-state advertisements describe local topology and link metrics.
+  - q: What does SPF calculate?
+    options:
+    - A shortest-path tree from the router
+    - A DHCP lease pool
+    - An Ethernet CRC remainder
+    - A NAT translation table
+    answer: 0
+    why: SPF computes shortest paths from the router's topology database.
+  - q: Which protocol is a link-state IGP?
+    options:
+    - OSPF
+    - RIP v1 only
+    - ARP
+    - DHCP
+    answer: 0
+    why: OSPF is a link-state interior gateway protocol.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Create a small OSPF topology with at least four routers. Assign link costs, calculate the preferred
+    paths, then remove one link and observe the new SPF tree.
+- id: co3-ospf-convergence-budget
+  code: CN-CO3.4.3
+  title: OSPF Convergence and the Five-Second Budget
+  session: 11
+  skilling_exp: 16
+  btl: 5
+  difficulty: 3
+  prereqs:
+  - co3-link-state-spf-ospf
+  eli5: Convergence is the time a network needs to settle on working routes after a change. The CO-3 target is under
+    five seconds.
+  key_points:
+  - Convergence includes failure detection, information flooding, route calculation and forwarding update.
+  - The handout sets an OSPF convergence target of less than five seconds.
+  - Measure from the defined failure event to stable, correct forwarding.
+  - Fast timers can increase control-plane load or sensitivity to transient loss.
+  - A measured result must include the test topology, failure type and observation method.
+  deep_dive: Routing convergence is the interval between a topology change and the network reaching a stable forwarding
+    state that reflects that change. For OSPF, the interval can include detecting the failed adjacency, generating
+    and flooding updated link-state information, running SPF and installing new forwarding entries. The CO-3 outcome
+    explicitly calls for an OSPF convergence budget under five seconds. A defensible measurement needs a precise
+    start event, such as disconnecting a specified link, and a precise end condition, such as successful traffic
+    over the alternate path with no further route changes. Record packet loss during the interval as well as the
+    final route. Tuning hello, dead and other protocol timers may affect detection speed, but overly aggressive
+    settings can increase processing and cause false failure detection on unstable links. The experiment should
+    therefore compare measured convergence with the five-second target and document the trade-off rather than simply
+    choosing the smallest timer values.
+  formulas:
+  - id: convergence_time
+    latex: T_{conv}=T_{detect}+T_{flood}+T_{SPF}+T_{install}
+    vars:
+      T_conv: total convergence time
+      T_detect: failure detection time
+      T_flood: link-state flooding time
+      T_SPF: SPF calculation time
+      T_install: forwarding installation time
+    example: If stages take 1.2 s, 0.8 s, 0.4 s and 0.3 s, total convergence is 2.7 s.
+  viz:
+    type: timeline
+    description: Allocate the total convergence interval across detection, flooding, SPF and installation.
+    params:
+    - name: convergence_seconds
+      label: Measured convergence time
+      min: 0
+      max: 15
+      step: 0.1
+      default: 3.2
+      unit: seconds
+    compute:
+      budget_margin: 5-convergence_seconds
+    outcomes:
+    - when: convergence_seconds < 5
+      title: Within CO-3 target
+      explain: Measured convergence is below the handout's five-second target.
+      severity: info
+    - when: convergence_seconds >= 5 && convergence_seconds <= 7
+      title: Target missed narrowly
+      explain: The network does not meet the stated under-five-second target; inspect detection and update stages.
+      severity: warn
+    - when: convergence_seconds > 7
+      title: Convergence significantly over budget
+      explain: Investigate failure detection, flooding, SPF processing, forwarding installation and topology design.
+      severity: fail
+    combos_to_try:
+    - set:
+        convergence_seconds: 2.5
+      lesson: A 2.5-second result is within the five-second target.
+    - set:
+        convergence_seconds: 5
+      lesson: Exactly five seconds does not satisfy an under-five-second target.
+    - set:
+        convergence_seconds: 9
+      lesson: A nine-second result requires detailed stage-by-stage investigation.
+  common_mistakes:
+  - Starting the stopwatch after failure detection instead of at the actual failure event.
+  - Claiming convergence from a routing-table update without testing traffic.
+  - Ignoring transient packet loss during failover.
+  quiz:
+  - q: What is the CO-3 OSPF convergence target?
+    options:
+    - Under 5 seconds
+    - Exactly 10 seconds
+    - Under 1 minute
+    - No target is specified
+    answer: 0
+    why: The course outcome asks for OSPF convergence under five seconds.
+  - q: Which event should start a convergence measurement?
+    options:
+    - The defined topology failure event
+    - The moment the final route is printed
+    - The end of the lab session
+    - The first DNS query after the test
+    answer: 0
+    why: The start event must be defined and reproducible, such as the link failure.
+  - q: A route changes in the routing table, but packets still fail. Is convergence complete?
+    options:
+    - Not necessarily; verify stable forwarding and traffic recovery
+    - Yes, route-table change alone proves it
+    - Only DNS can answer this
+    - Convergence is unrelated to packet delivery
+    answer: 0
+    why: The end condition should include correct, stable forwarding.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Measure OSPF convergence after a controlled link failure. Report start/end definitions, elapsed time,
+    packet loss and whether the result meets the under-five-second target.

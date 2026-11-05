@@ -1,0 +1,328 @@
+part:
+  id: co1-part-06
+  co: CO1
+  title: Bandwidth-Delay Product and Data in Flight
+  order: 6
+  concept_ids:
+  - bandwidth-delay-product
+  - data-in-flight
+  - bdp-and-window-capacity
+concepts:
+- id: bandwidth-delay-product
+  code: CN-CO1.6.1
+  title: Bandwidth-Delay Product (BDP)
+  session: 3
+  skilling_exp: 4
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - network-throughput
+  - end-to-end-delay-equation
+  eli5: Imagine a conveyor belt that moves at a certain speed and takes time to reach the other end. The amount
+    of material on the belt while it is moving depends on both speed and travel time. BDP describes the data that
+    can be in transit on a network path.
+  key_points:
+  - BDP is bandwidth multiplied by round-trip time when discussing a transport path.
+  - Use bits/s and seconds to obtain bits.
+  - BDP estimates the amount of data that can be in flight at the path rate.
+  - State whether bandwidth is bottleneck capacity and whether delay is RTT or one-way delay.
+  deep_dive: The bandwidth-delay product is the product of a path's bandwidth and its delay. In transport discussions,
+    BDP is commonly calculated using bottleneck bandwidth and round-trip time (RTT), producing the amount of data
+    that can be in flight during one RTT at that rate. Use bits per second and seconds to obtain bits, then divide
+    by eight if bytes are required. BDP is not a measured throughput value; it is a path-capacity quantity that
+    helps reason about how much outstanding data is needed to keep a path busy. If a sender's effective window is
+    much smaller than the BDP, it may be unable to keep the bottleneck fully utilized, assuming other constraints
+    are absent. The handout lists BDP as a CO1 concept and includes it in Skilling Experiment 4 alongside percentiles
+    and buffer analysis. Correct calculations must state the bandwidth, RTT, and units, and distinguish BDP from
+    the amount of data transferred in an arbitrary application operation.
+  formulas:
+  - id: bdp
+    latex: BDP=BW\times RTT
+    vars:
+      BDP: bandwidth-delay product in bits
+      BW: bottleneck bandwidth in bits per second
+      RTT: round-trip time in seconds
+    example: For 100 Mb/s and 40 ms RTT, BDP=100,000,000×0.04=4,000,000 bits=500,000 bytes (500 kB decimal).
+  viz:
+    type: custom
+    description: Adjust bottleneck bandwidth and observe bandwidth-delay product (bdp) as the selected network condition
+      changes.
+    params:
+    - name: bandwidth
+      label: Bottleneck bandwidth
+      min: 1
+      max: 1000
+      step: 1
+      default: 100
+      unit: Mb/s
+    compute:
+      bdp_kB: bandwidth * 1000000 * 0.04 / 8 / 1000
+    outcomes:
+    - when: bandwidth <= 200
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: bandwidth > 200 && bandwidth <= 700
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: bandwidth > 700
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        bandwidth: 100
+      lesson: At 100 Mb/s and 40 ms RTT, BDP is 500 kB.
+    - set:
+        bandwidth: 500
+      lesson: Higher bandwidth increases the in-flight data needed for the same RTT.
+    - set:
+        bandwidth: 900
+      lesson: A high-capacity path with the same RTT has a large BDP.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of bandwidth-delay product (bdp)?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Calculate BDP for a 100 Mb/s path with 40 ms RTT, then repeat for 200 ms RTT and compare the required
+    in-flight data.
+- id: data-in-flight
+  code: CN-CO1.6.2
+  title: Data in Flight
+  session: 3
+  skilling_exp: 4
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - bandwidth-delay-product
+  eli5: Data in flight is like cars already travelling on a highway. They have left the starting point but have
+    not yet reached the destination. A long, fast highway can contain many cars at once.
+  key_points:
+  - Data in flight is data sent but not yet acknowledged or otherwise completed, depending on the protocol context.
+  - The amount depends on sending rate and feedback delay.
+  - A long RTT means more data may be outstanding at a given sending rate.
+  - Captures can help estimate outstanding data when sequence and acknowledgment information is available.
+  deep_dive: 'Data in flight is the amount of data that has been transmitted but has not yet been acknowledged by
+    the receiver in a reliable transport such as TCP. The sender''s outstanding data is constrained by the effective
+    sending window and by congestion and receiver flow-control limits. For a path to sustain a target rate, enough
+    data must be outstanding to cover the bandwidth-delay product. If the sender can keep only a small amount in
+    flight relative to the BDP, the sender may wait for acknowledgments before it can transmit more, leaving capacity
+    unused. A packet capture can help estimate outstanding bytes by comparing transmitted sequence space with acknowledgment
+    progress, while accounting for retransmissions and capture location. The concept connects network delay to achievable
+    throughput: high bandwidth alone does not guarantee high throughput when the feedback loop has a long RTT and
+    the sender''s window is too small.'
+  formulas:
+  - id: flight_bytes
+    latex: D_{flight}\approx R\times RTT
+    vars:
+      D_{flight: data in flight in bits
+      R: sending rate in bits per second
+      RTT: round-trip time in seconds
+    example: At 50 Mb/s over 80 ms RTT, data in flight is about 50,000,000×0.08=4,000,000 bits=500,000 bytes.
+  viz:
+    type: packet_flow
+    description: Adjust round-trip time and observe data in flight as the selected network condition changes.
+    params:
+    - name: rtt
+      label: Round-trip time
+      min: 1
+      max: 500
+      step: 1
+      default: 80
+      unit: ms
+    compute:
+      flight_kB: 50 * 1000000 * rtt / 1000 / 8 / 1000
+    outcomes:
+    - when: rtt <= 100
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: rtt > 100 && rtt <= 300
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: rtt > 300
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        rtt: 80
+      lesson: At 50 Mb/s and 80 ms RTT, about 500 kB can be in flight.
+    - set:
+        rtt: 200
+      lesson: Longer RTT increases the data-in-flight requirement at the same rate.
+    - set:
+        rtt: 450
+      lesson: A very long RTT requires substantially more outstanding data to sustain the same rate.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of data in flight?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Use a packet capture or a sequence-number diagram to estimate outstanding TCP bytes and compare the
+    result with the path BDP.
+- id: bdp-and-window-capacity
+  code: CN-CO1.6.3
+  title: BDP, Window Capacity, and Path Utilization
+  session: 3
+  skilling_exp: 4
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - bandwidth-delay-product
+  - data-in-flight
+  eli5: A highway cannot be fully used if the traffic light releases only a few cars before stopping to wait. A
+    network sender also needs enough allowed outstanding data to keep a long path busy.
+  key_points:
+  - Compare the effective window with BDP to reason about whether the sender can fill the path.
+  - A window below BDP can limit achievable throughput.
+  - A window at or above BDP may be sufficient, but loss, congestion control, receiver limits, and application behavior
+    still matter.
+  - Do not assume window size alone guarantees the measured rate.
+  deep_dive: The relationship between BDP and the effective sending window explains one important limit on throughput.
+    If the amount of data the sender may keep outstanding is smaller than the path BDP, the sender may be unable
+    to maintain continuous transmission at the bottleneck rate because it must wait for acknowledgments. A simplified
+    upper bound is the effective window divided by RTT. The effective window is constrained by transport mechanisms,
+    including receiver-advertised flow control and congestion control. Even when the window is at least the BDP,
+    actual throughput can remain lower because of loss, retransmissions, CPU limits, application pacing, or competing
+    traffic. Use this comparison as a diagnostic, not a guarantee. The handout places BDP alongside performance
+    baselines and buffer analysis, so students should connect the calculation to measured throughput and delay rather
+    than treating BDP as an isolated formula.
+  formulas:
+  - id: window_rate
+    latex: T_{window}\leq\frac{W_{eff}}{RTT}
+    vars:
+      T_{window: window-limited throughput in bytes per second when W_eff is bytes
+      W_{eff: effective outstanding-data window in bytes
+      RTT: round-trip time in seconds
+    example: With a 256 kB effective window and 0.1 s RTT, the simplified limit is 256000/0.1=2.56 MB/s.
+  viz:
+    type: bar_compare
+    description: Adjust effective window / bdp and observe bdp, window capacity, and path utilization as the selected
+      network condition changes.
+    params:
+    - name: window_ratio
+      label: Effective window / BDP
+      min: 0
+      max: 2
+      step: 0.01
+      default: 1
+      unit: ratio
+    compute:
+      window_headroom: window_ratio - 1
+    outcomes:
+    - when: window_ratio >= 1
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: window_ratio >= 0.7 && window_ratio < 1
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: window_ratio < 0.7
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        window_ratio: 1.2
+      lesson: The effective window exceeds BDP; investigate other limits if throughput is low.
+    - set:
+        window_ratio: 0.85
+      lesson: The window is slightly below BDP and may constrain full path utilization.
+    - set:
+        window_ratio: 0.4
+      lesson: The window is far below BDP and is likely to limit the achievable rate.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of bdp, window capacity, and path utilization?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Compare a 256 kB effective window with a 500 kB BDP at 100 ms RTT; calculate the simplified window-limited
+    throughput.

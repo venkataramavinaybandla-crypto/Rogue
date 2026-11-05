@@ -1,0 +1,343 @@
+part:
+  id: co6_04
+  co: CO-6
+  title: DiffServ, Policing and Shaping
+  order: 4
+  concept_ids:
+  - co6-diffserv-marking
+  - co6-policing-shaping
+  - co6-media-wire-rate
+concepts:
+- id: co6-diffserv-marking
+  code: CN-CO6.04.1
+  title: DiffServ Marking and Traffic Classes
+  session: 22
+  skilling_exp: 24
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co6-priority-queuing
+  eli5: DiffServ uses packet markings to indicate how traffic should be treated by network devices. Marking is a
+    classification signal; it does not itself reserve bandwidth or guarantee a delay.
+  key_points:
+  - The Differentiated Services field carries the DSCP marking.
+  - Network devices map markings to local forwarding behaviours and queues.
+  - Consistent classification and policy are needed across the path.
+  - Trust boundaries determine whether incoming markings are accepted or rewritten.
+  - Validate the treatment actually applied at each relevant hop.
+  deep_dive: DiffServ Marking and Traffic Classes is part of CO-6, Predictability — Real-time, Multicast and QoS.
+    The purpose of this topic is to make network performance measurable and defensible for time-sensitive communication.
+    Begin by defining the traffic, endpoints, path and service target. Keep delay, delay variation, loss, bandwidth
+    and clock error as distinct quantities; they affect applications in different ways and should not be collapsed
+    into one vague quality score. The formula in this concept is a simplified model for organizing a calculation.
+    Identify every variable, retain its units and state assumptions before using it. The worked example demonstrates
+    the arithmetic, but a production result must use measurements from the actual path and traffic profile. Use
+    the visualization to explore how changing one input affects the simplified relationship, then compare that result
+    with packet captures, counters or device measurements. For the course integration task, every component contribution
+    should be named, measured and totalled. Evaluate the system under sustained contention rather than only during
+    an idle period, and report p50 and p99 values against explicit targets. The result should include enough evidence
+    for another engineer to reproduce the measurement and defend the conclusion.
+  formulas:
+  - id: co6-diffserv-marking-formula
+    latex: DSCP = 6-bit codepoint
+    vars: 'DSCP: differentiated services code point carried in the IP header'
+    example: A configured DSCP value identifies a traffic class; each hop still needs a policy that maps that class
+      to a treatment.
+  viz:
+    type: packet_flow
+    description: Explore diffserv marking and traffic classes by changing the measured value and reference, then
+      interpret the result against the stated performance objective.
+    params:
+    - name: input_a
+      label: Measured value
+      min: 1
+      max: 100
+      step: 1
+      default: 30
+      unit: units
+    - name: input_b
+      label: Target or reference
+      min: 1
+      max: 100
+      step: 1
+      default: 40
+      unit: units
+    compute:
+      difference: input_b - input_a
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a <= input_b
+      title: Measured value is within reference
+      explain: The selected value does not exceed the reference in this simplified comparison.
+      severity: info
+    - when: input_a > input_b
+      title: Measured value exceeds reference
+      explain: The selected value exceeds the reference; inspect the relevant budget or operating condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 30
+        input_b: 40
+      lesson: Start with a measured value below or within the reference.
+    - set:
+        input_a: 75
+        input_b: 40
+      lesson: Increase the measured value beyond the reference and explain the operational consequence.
+  common_mistakes:
+  - Assuming a DSCP mark guarantees end-to-end priority.
+  - Trusting arbitrary markings from untrusted endpoints.
+  - Using inconsistent class mappings across devices.
+  quiz:
+  - q: What is the main engineering concern in diffserv marking and traffic classes?
+    options:
+    - Measure and manage the performance behaviour described by diffserv marking and traffic classes
+    - Assume every packet has identical delay
+    - Replace all network protocols with one mechanism
+    - Optimize only the peak throughput
+    answer: 0
+    why: The topic focuses on making the named performance behaviour measurable and controllable.
+  - q: Why should performance be evaluated under sustained contention?
+    options:
+    - It removes the need for measurement
+    - It reveals queueing and tail behaviour that may not appear on an idle path
+    - It guarantees every packet will be delayed equally
+    - It makes clock synchronization unnecessary
+    answer: 1
+    why: Load exposes resource contention and tail effects that quiet-period tests can hide.
+  - q: Which evidence makes a performance claim defensible?
+    options:
+    - A single best-case ping
+    - A screenshot of a dashboard without context
+    - Named path components, a documented method, measured results and stated targets
+    - An estimate based only on the configured link speed
+    answer: 2
+    why: A reproducible claim requires explicit measurements, method and acceptance criteria.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small measurement or calculation exercise for diffserv marking and traffic classes. State the
+    traffic conditions and target, record the result, and explain whether the result meets the target.
+- id: co6-policing-shaping
+  code: CN-CO6.04.2
+  title: Policing Versus Shaping
+  session: 22
+  skilling_exp: 24
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co6-diffserv-marking
+  eli5: Policing checks whether traffic conforms to a rate policy and may drop or remark excess packets. Shaping
+    delays excess packets in a queue so that they leave at a controlled rate.
+  key_points:
+  - Policing enforces a traffic profile at the point of measurement.
+  - Shaping buffers packets and smooths their transmission over time.
+  - Policing can create loss or remarking when traffic exceeds the profile.
+  - Shaping adds queueing delay and requires sufficient buffer capacity.
+  - Choose the method based on the service objective and delay tolerance.
+  deep_dive: Policing Versus Shaping is part of CO-6, Predictability — Real-time, Multicast and QoS. The purpose
+    of this topic is to make network performance measurable and defensible for time-sensitive communication. Begin
+    by defining the traffic, endpoints, path and service target. Keep delay, delay variation, loss, bandwidth and
+    clock error as distinct quantities; they affect applications in different ways and should not be collapsed into
+    one vague quality score. The formula in this concept is a simplified model for organizing a calculation. Identify
+    every variable, retain its units and state assumptions before using it. The worked example demonstrates the
+    arithmetic, but a production result must use measurements from the actual path and traffic profile. Use the
+    visualization to explore how changing one input affects the simplified relationship, then compare that result
+    with packet captures, counters or device measurements. For the course integration task, every component contribution
+    should be named, measured and totalled. Evaluate the system under sustained contention rather than only during
+    an idle period, and report p50 and p99 values against explicit targets. The result should include enough evidence
+    for another engineer to reproduce the measurement and defend the conclusion.
+  formulas:
+  - id: co6-policing-shaping-formula
+    latex: B_excess = max(0,A - r*t - b)
+    vars: 'B_excess: traffic beyond a simple token-bucket allowance; A: arriving bytes; r: allowed rate; t: interval;
+      b: burst allowance'
+    example: If 15 MB arrives over one second with a 10 MB/s rate and 2 MB burst allowance, the simple excess is
+      3 MB.
+  viz:
+    type: token_bucket
+    description: Explore policing versus shaping by changing the measured value and reference, then interpret the
+      result against the stated performance objective.
+    params:
+    - name: arrival
+      label: Arriving data
+      min: 1
+      max: 100
+      step: 1
+      default: 60
+      unit: MB
+    - name: allowance
+      label: Allowed data
+      min: 1
+      max: 100
+      step: 1
+      default: 50
+      unit: MB
+    compute:
+      excess: max(0,arrival - allowance)
+    outcomes:
+    - when: arrival <= allowance
+      title: Traffic conforms
+      explain: The offered amount is within the configured allowance.
+      severity: info
+    - when: arrival > allowance
+      title: Traffic exceeds allowance
+      explain: The excess may be delayed by shaping or dropped/remarked by policing.
+      severity: warn
+    combos_to_try:
+    - set:
+        arrival: 60
+        allowance: 50
+      lesson: Start with a measured value below or within the reference.
+    - set:
+        arrival: 85
+        allowance: 50
+      lesson: Increase the measured value beyond the reference and explain the operational consequence.
+  common_mistakes:
+  - Calling shaping and policing interchangeable.
+  - Ignoring delay introduced by shaping queues.
+  - Setting a burst allowance without considering packet sizes.
+  quiz:
+  - q: What is the main engineering concern in policing versus shaping?
+    options:
+    - Measure and manage the performance behaviour described by policing versus shaping
+    - Assume every packet has identical delay
+    - Replace all network protocols with one mechanism
+    - Optimize only the peak throughput
+    answer: 0
+    why: The topic focuses on making the named performance behaviour measurable and controllable.
+  - q: Why should performance be evaluated under sustained contention?
+    options:
+    - It removes the need for measurement
+    - It reveals queueing and tail behaviour that may not appear on an idle path
+    - It guarantees every packet will be delayed equally
+    - It makes clock synchronization unnecessary
+    answer: 1
+    why: Load exposes resource contention and tail effects that quiet-period tests can hide.
+  - q: Which evidence makes a performance claim defensible?
+    options:
+    - A single best-case ping
+    - A screenshot of a dashboard without context
+    - Named path components, a documented method, measured results and stated targets
+    - An estimate based only on the configured link speed
+    answer: 2
+    why: A reproducible claim requires explicit measurements, method and acceptance criteria.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small measurement or calculation exercise for policing versus shaping. State the traffic conditions
+    and target, record the result, and explain whether the result meets the target.
+- id: co6-media-wire-rate
+  code: CN-CO6.04.3
+  title: Media Wire-Rate and QoS Capacity Planning
+  session: 22
+  skilling_exp: 24
+  btl: 4
+  difficulty: 2
+  prereqs:
+  - co6-media-bandwidth
+  - co6-policing-shaping
+  eli5: QoS planning must compare the actual wire rate of media traffic with the capacity available to its class.
+    Header overhead, packet rate and concurrent streams all affect the result.
+  key_points:
+  - Calculate per-stream wire rate including packet overhead.
+  - Multiply by the expected number of simultaneous streams.
+  - Account for other traffic assigned to the same class.
+  - Leave operating headroom for bursts and measurement uncertainty.
+  - Check the configured scheduler and policer against the calculated requirement.
+  deep_dive: Media Wire-Rate and QoS Capacity Planning is part of CO-6, Predictability — Real-time, Multicast and
+    QoS. The purpose of this topic is to make network performance measurable and defensible for time-sensitive communication.
+    Begin by defining the traffic, endpoints, path and service target. Keep delay, delay variation, loss, bandwidth
+    and clock error as distinct quantities; they affect applications in different ways and should not be collapsed
+    into one vague quality score. The formula in this concept is a simplified model for organizing a calculation.
+    Identify every variable, retain its units and state assumptions before using it. The worked example demonstrates
+    the arithmetic, but a production result must use measurements from the actual path and traffic profile. Use
+    the visualization to explore how changing one input affects the simplified relationship, then compare that result
+    with packet captures, counters or device measurements. For the course integration task, every component contribution
+    should be named, measured and totalled. Evaluate the system under sustained contention rather than only during
+    an idle period, and report p50 and p99 values against explicit targets. The result should include enough evidence
+    for another engineer to reproduce the measurement and defend the conclusion.
+  formulas:
+  - id: co6-media-wire-rate-formula
+    latex: R_total = n * R_wire
+    vars: 'R_total: aggregate media wire rate; n: simultaneous streams; R_wire: per-stream wire rate'
+    example: If each stream uses 96 kbit/s on the wire and 40 streams are active, aggregate demand is 3.84 Mbit/s.
+  viz:
+    type: bar_compare
+    description: Explore media wire-rate and qos capacity planning by changing the measured value and reference,
+      then interpret the result against the stated performance objective.
+    params:
+    - name: input_a
+      label: Measured value
+      min: 1
+      max: 100
+      step: 1
+      default: 30
+      unit: units
+    - name: input_b
+      label: Target or reference
+      min: 1
+      max: 100
+      step: 1
+      default: 40
+      unit: units
+    compute:
+      difference: input_b - input_a
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a <= input_b
+      title: Measured value is within reference
+      explain: The selected value does not exceed the reference in this simplified comparison.
+      severity: info
+    - when: input_a > input_b
+      title: Measured value exceeds reference
+      explain: The selected value exceeds the reference; inspect the relevant budget or operating condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 30
+        input_b: 40
+      lesson: Start with a measured value below or within the reference.
+    - set:
+        input_a: 75
+        input_b: 40
+      lesson: Increase the measured value beyond the reference and explain the operational consequence.
+  common_mistakes:
+  - Planning from payload rate only.
+  - Ignoring concurrent calls or streams.
+  - Allocating the entire class capacity with no headroom.
+  quiz:
+  - q: What is the main engineering concern in media wire-rate and qos capacity planning?
+    options:
+    - Measure and manage the performance behaviour described by media wire-rate and qos capacity planning
+    - Assume every packet has identical delay
+    - Replace all network protocols with one mechanism
+    - Optimize only the peak throughput
+    answer: 0
+    why: The topic focuses on making the named performance behaviour measurable and controllable.
+  - q: Why should performance be evaluated under sustained contention?
+    options:
+    - It removes the need for measurement
+    - It reveals queueing and tail behaviour that may not appear on an idle path
+    - It guarantees every packet will be delayed equally
+    - It makes clock synchronization unnecessary
+    answer: 1
+    why: Load exposes resource contention and tail effects that quiet-period tests can hide.
+  - q: Which evidence makes a performance claim defensible?
+    options:
+    - A single best-case ping
+    - A screenshot of a dashboard without context
+    - Named path components, a documented method, measured results and stated targets
+    - An estimate based only on the configured link speed
+    answer: 2
+    why: A reproducible claim requires explicit measurements, method and acceptance criteria.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small measurement or calculation exercise for media wire-rate and qos capacity planning. State
+    the traffic conditions and target, record the result, and explain whether the result meets the target.

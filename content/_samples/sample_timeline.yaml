@@ -1,0 +1,32 @@
+part:
+  id: sample-part-03
+  co: CO-1
+  title: Sample Sequence Diagram Timeline Test
+  order: 102
+  concept_ids:
+    - timeline-sample-test
+concepts:
+  - id: timeline-sample-test
+    code: "TEST-TIMELINE"
+    title: "Sequence Diagram Timeline Test"
+    session: 1
+    skilling_exp: 1
+    btl: 3
+    difficulty: 2
+    prereqs: []
+    eli5: "Interactive verification suite for timeline visualizer in Rogue telemetry system."
+    key_points:
+      - "Driven strictly by params, values, outputs, outcomes contract."
+      - "Features live bidirectional interaction and animation."
+    deep_dive: "Detailed operational verification of timeline component under Rogue dashboard engine."
+    formulas: []
+    viz:
+      type: "timeline"
+      description: "Sample test suite for timeline"
+      params: [{"name":"step","label":"Exchange Step","min":1,"max":5,"step":1,"default":2,"unit":"step"}]
+      compute: {"rtt_elapsed":"step * 25"}
+      outcomes: [{"when":"step >= 3","title":"Connection Active","explain":"Three-way handshake completed.","severity":"info"},{"when":"step < 3","title":"Handshake In Progress","explain":"Awaiting ACK completion.","severity":"warn"}]
+      combos_to_try: [{"set":{"step":5},"lesson":"Full HTTP request and response delivered."}]
+    common_mistakes: []
+    quiz: []
+    exam_tags: ["diagnostic", "sample"]

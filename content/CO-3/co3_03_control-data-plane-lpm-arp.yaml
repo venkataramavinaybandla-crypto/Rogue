@@ -1,0 +1,326 @@
+part:
+  id: co3_03
+  co: CO-3
+  title: Control Plane, Forwarding, LPM and ARP
+  order: 3
+  concept_ids:
+  - co3-control-data-plane
+  - co3-longest-prefix-arp
+  - co3-forwarding-path-diagnosis
+concepts:
+- id: co3-control-data-plane
+  code: CN-CO3.3.1
+  title: Control Plane and Data Plane
+  session: 10
+  skilling_exp: 15
+  btl: 3
+  difficulty: 2
+  prereqs: []
+  eli5: The control plane decides where packets should go. The data plane uses those decisions to forward packets.
+  key_points:
+  - The control plane computes or learns reachability and installs forwarding information.
+  - The data plane performs per-packet forwarding using the installed forwarding table.
+  - Routing protocols and route selection are control-plane functions.
+  - Longest-prefix lookup and next-hop forwarding are data-plane operations at packet time.
+  - A control-plane problem can leave the data plane with stale or missing routes.
+  deep_dive: 'The control plane and data plane have different responsibilities. The control plane learns topology
+    and reachability, runs routing protocols, selects routes and installs forwarding entries. The data plane handles
+    packets at line rate by examining destination information and selecting an output interface or next hop from
+    the forwarding table. Separating these roles helps explain why a router can continue forwarding with previously
+    installed entries while a routing protocol is reconverging, or why a correct control-plane route may not produce
+    expected forwarding if the forwarding entry is missing or inconsistent. In troubleshooting, inspect both layers:
+    confirm that the router has learned the intended route, then verify that the forwarding table and actual packet
+    path match it. The handout places control and data planes alongside longest-prefix match, ARP and forwarding,
+    so the concepts should be studied as one pipeline from route learning to packet delivery.'
+  formulas:
+  - id: forwarding_rate
+    latex: PPS=\frac{R}{8L}
+    vars:
+      PPS: packets per second at line rate
+      R: link rate in bits per second
+      L: packet length in bytes
+    example: At 100 Mb/s with 1000-byte packets, PPS = 100,000,000/(8×1000) = 12,500 packets/s.
+  viz:
+    type: bar_compare
+    description: Compare the conceptual roles of route computation and packet forwarding.
+    params:
+    - name: packet_rate
+      label: Packet rate
+      min: 100
+      max: 100000
+      step: 100
+      default: 12500
+      unit: packets/s
+    compute:
+      forwarding_load: packet_rate/1000
+    outcomes:
+    - when: packet_rate < 10000
+      title: Lower forwarding load
+      explain: The forwarding workload is relatively modest in this illustrative scale.
+      severity: info
+    - when: packet_rate >= 10000 && packet_rate <= 50000
+      title: Moderate forwarding load
+      explain: Forwarding capacity and hardware path should be considered under load.
+      severity: info
+    - when: packet_rate > 50000
+      title: High forwarding load
+      explain: Validate forwarding capacity and observe packet drops or processing bottlenecks.
+      severity: warn
+    combos_to_try:
+    - set:
+        packet_rate: 5000
+      lesson: A lower packet rate still relies on the installed forwarding table.
+    - set:
+        packet_rate: 12500
+      lesson: Forwarding rate depends on packet size as well as bit rate.
+    - set:
+        packet_rate: 80000
+      lesson: High packet rates can expose forwarding capacity limits.
+  common_mistakes:
+  - Calling route computation a data-plane task.
+  - Assuming a route shown in the control plane proves packets are forwarded correctly.
+  - Ignoring stale forwarding entries after topology changes.
+  quiz:
+  - q: Which task belongs primarily to the control plane?
+    options:
+    - Running a routing protocol to learn routes
+    - Decrementing a packet TTL on every forwarded packet
+    - Transmitting an Ethernet frame
+    - Matching a packet to an installed next hop
+    answer: 0
+    why: Routing protocols learn and select routes as control-plane work.
+  - q: Which task belongs primarily to the data plane?
+    options:
+    - Forwarding a packet using an installed forwarding entry
+    - Computing the OSPF topology database
+    - Negotiating BGP policy
+    - Choosing an address allocation plan
+    answer: 0
+    why: The data plane uses installed forwarding information for packets.
+  - q: A route appears in the routing table but traffic still fails. What is a useful next check?
+    options:
+    - Forwarding table and actual packet path
+    - Only the router hostname
+    - The DHCP lease duration on an unrelated subnet
+    - The DNS zone's display format
+    answer: 0
+    why: The installed forwarding state and packet path may differ from the control-plane view.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Draw the path from a routing-protocol update to an installed forwarding entry, then explain how you
+    would verify both control-plane and data-plane state.
+- id: co3-longest-prefix-arp
+  code: CN-CO3.3.2
+  title: Longest-Prefix Match and ARP
+  session: 10
+  skilling_exp: 15
+  btl: 4
+  difficulty: 2
+  prereqs:
+  - co3-control-data-plane
+  - co3-ipv4-prefix-subnetting
+  eli5: Routers choose the most specific route that matches a destination. On a local IPv4 network, ARP discovers
+    the link-layer address needed to send a frame to the next hop.
+  key_points:
+  - Longest-prefix match selects the matching route with the greatest prefix length.
+  - A default route is used when no more-specific route matches.
+  - ARP resolves an IPv4 address on a local link to a MAC address.
+  - For an off-subnet destination, a host normally resolves the MAC address of its gateway, not the remote host.
+  - ARP is local-link address resolution and is distinct from IP routing.
+  deep_dive: 'A router may have several routes that match the same destination. Longest-prefix matching chooses
+    the route with the greatest number of leading network bits, because it is the most specific match. For example,
+    a /24 route is preferred over a /16 route when both match the destination. If no specific route matches, a default
+    route may be used if one exists. After the next hop is selected, Ethernet delivery still requires a destination
+    MAC address on the local link. ARP performs this IPv4-to-MAC resolution by broadcasting a request for the local-link
+    owner of an IPv4 address and learning the reply. A host sending to a remote network normally ARPs for its configured
+    gateway, since the remote host is not on the local Ethernet segment. A common diagnostic error is to confuse
+    a missing route with a missing ARP entry: one concerns network-layer path selection, while the other concerns
+    local-link delivery to the selected next hop.'
+  formulas:
+  - id: lpm_choice
+    latex: p^*=\max\{p_i:\ destination\in prefix_i\}
+    vars:
+      p_star: selected longest matching prefix length
+      p_i: prefix length of a matching route
+    example: If /16, /24 and /25 all match, the /25 route wins.
+  viz:
+    type: subnet_tree
+    description: See how a more-specific matching prefix takes precedence.
+    params:
+    - name: matched_prefix
+      label: Most-specific matching prefix
+      min: 0
+      max: 32
+      step: 1
+      default: 24
+      unit: bits
+    compute:
+      selected_prefix: matched_prefix
+    outcomes:
+    - when: matched_prefix < 8
+      title: Very broad match
+      explain: A short prefix is less specific and may represent an aggregate route.
+      severity: warn
+    - when: matched_prefix >= 8 && matched_prefix < 32
+      title: Specific route match
+      explain: Among matching routes, the greatest prefix length is selected.
+      severity: info
+    - when: matched_prefix == 32
+      title: Host route
+      explain: A /32 matches one IPv4 address and is maximally specific.
+      severity: info
+    combos_to_try:
+    - set:
+        matched_prefix: 16
+      lesson: A /16 loses to a matching /24.
+    - set:
+        matched_prefix: 24
+      lesson: A /24 wins over a matching /16.
+    - set:
+        matched_prefix: 32
+      lesson: A /32 host route wins when it matches.
+  common_mistakes:
+  - Choosing the numerically smallest prefix length instead of the longest.
+  - ARPing for a remote destination instead of the local gateway.
+  - Treating ARP resolution as a substitute for a route.
+  quiz:
+  - q: A destination matches both /16 and /24 routes. Which route is selected?
+    options:
+    - /16
+    - /24
+    - Both equally
+    - Neither
+    answer: 1
+    why: The /24 has the longer, more specific prefix.
+  - q: What does ARP resolve?
+    options:
+    - IPv4 address to a local-link MAC address
+    - Domain name to IPv6 address
+    - TCP port to process ID
+    - AS path to next hop
+    answer: 0
+    why: ARP maps an IPv4 protocol address to a link-layer address on the local network.
+  - q: A host sends to an off-subnet destination. Which MAC address does it normally need?
+    options:
+    - The default gateway's MAC address
+    - The remote server's MAC address directly
+    - The DNS server's MAC address in all cases
+    - A broadcast MAC for every packet
+    answer: 0
+    why: The frame is delivered to the local router, which forwards the IP packet onward.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Given a routing table with overlapping prefixes, identify the selected route for five destinations
+    and show which local next-hop MAC address ARP must resolve.
+- id: co3-forwarding-path-diagnosis
+  code: CN-CO3.3.3
+  title: End-to-End Forwarding Path Diagnosis
+  session: 10
+  skilling_exp: 15
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co3-longest-prefix-arp
+  eli5: To follow a packet, check the destination route, next hop, local MAC resolution and each router along the
+    path.
+  key_points:
+  - The source host first decides whether the destination is on-link or off-link.
+  - Off-link packets are sent to the configured gateway's MAC address.
+  - Each router performs a route lookup and forwards toward the selected next hop.
+  - TTL/hop-limit handling prevents packets from circulating indefinitely.
+  - A packet trace should be compared with the expected route and forwarding state at each hop.
+  deep_dive: 'Forwarding diagnosis follows a packet from its source to its destination rather than examining one
+    device in isolation. The source host compares the destination with its own prefix to decide whether the destination
+    is local. For an off-link destination, it sends the frame to the gateway''s MAC address while retaining the
+    remote IP destination in the packet. Each router then performs a forwarding lookup, selects the best matching
+    route and resolves the next-hop link-layer address as needed. The packet''s TTL is reduced as it traverses IPv4
+    routers, preventing indefinite circulation if a loop exists. When the observed path differs from the intended
+    path, compare the host''s address and mask, default gateway, route table, ARP cache and each router''s forwarding
+    entry. This process ties together the CO-3 topics: addressing, longest-prefix matching, ARP and the control/data-plane
+    distinction. The final diagnosis should identify the first hop where expected forwarding diverges from observed
+    forwarding.'
+  formulas:
+  - id: path_hops
+    latex: TTL_{out}=TTL_{in}-1
+    vars:
+      TTL_in: IPv4 TTL on packet arrival
+      TTL_out: IPv4 TTL after one router forwards it
+    example: A packet arriving with TTL 64 leaves a forwarding router with TTL 63.
+  viz:
+    type: topology_graph
+    description: Vary the number of routed hops and track the remaining TTL from an initial value of 64.
+    params:
+    - name: router_hops
+      label: Router hops
+      min: 0
+      max: 64
+      step: 1
+      default: 8
+      unit: hops
+    compute:
+      ttl_remaining: 64-router_hops
+    outcomes:
+    - when: router_hops < 32
+      title: TTL remains positive
+      explain: The illustrative packet has remaining TTL after this number of router hops.
+      severity: info
+    - when: router_hops >= 32 && router_hops < 64
+      title: TTL getting low
+      explain: A long path consumes much of the starting TTL; investigate unexpected loops or path inflation.
+      severity: warn
+    - when: router_hops >= 64
+      title: TTL exhausted
+      explain: The packet cannot be forwarded further with this illustrative starting TTL.
+      severity: fail
+    combos_to_try:
+    - set:
+        router_hops: 3
+      lesson: A short path consumes one TTL unit per router.
+    - set:
+        router_hops: 40
+      lesson: A long path leaves less TTL headroom.
+    - set:
+        router_hops: 64
+      lesson: The illustrative TTL is exhausted.
+  common_mistakes:
+  - Assuming the Ethernet destination MAC is the final remote host's MAC.
+  - Ignoring the host subnet mask when deciding on-link versus off-link.
+  - Treating a traceroute hop as proof that the application service is healthy.
+  quiz:
+  - q: What does a router normally do to IPv4 TTL when forwarding a packet?
+    options:
+    - Decrement it by one
+    - Increment it by one
+    - Replace it with the port number
+    - Copy it into the MAC address
+    answer: 0
+    why: Each IPv4 router decrements TTL during forwarding.
+  - q: What remains the same when a host sends an off-subnet packet to its gateway?
+    options:
+    - The IP destination remains the remote destination
+    - The Ethernet destination is the remote host's MAC
+    - The IP packet becomes an ARP request
+    - The gateway's MAC becomes the IP destination
+    answer: 0
+    why: The frame is addressed to the gateway, while the IP destination remains end-to-end.
+  - q: Which sequence best isolates a forwarding fault?
+    options:
+    - Check host prefix and gateway, then route and next-hop resolution at each hop
+    - Change DNS records before checking the IP path
+    - Disable all routing protocols
+    - Assume the first responding router proves full connectivity
+    answer: 0
+    why: A hop-by-hop comparison identifies where expected forwarding diverges.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Trace a packet from a host to a remote subnet. Record the IP destination, Ethernet destination, selected
+    route and next hop at each stage.

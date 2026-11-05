@@ -1,0 +1,32 @@
+part:
+  id: sample-part-12
+  co: CO-1
+  title: Sample Universal Multi-Output Fallback Test
+  order: 111
+  concept_ids:
+    - custom-sample-test
+concepts:
+  - id: custom-sample-test
+    code: "TEST-CUSTOM"
+    title: "Universal Multi-Output Fallback Test"
+    session: 1
+    skilling_exp: 1
+    btl: 3
+    difficulty: 2
+    prereqs: []
+    eli5: "Interactive verification suite for custom visualizer in Rogue telemetry system."
+    key_points:
+      - "Driven strictly by params, values, outputs, outcomes contract."
+      - "Features live bidirectional interaction and animation."
+    deep_dive: "Detailed operational verification of custom component under Rogue dashboard engine."
+    formulas: []
+    viz:
+      type: "custom"
+      description: "Sample test suite for custom"
+      params: [{"name":"factor","label":"Input Signal Factor","min":1,"max":100,"step":1,"default":25,"unit":"unit"}]
+      compute: {"output_linear":"factor * 2","output_sqrt":"sqrt(factor) * 10"}
+      outcomes: [{"when":"factor >= 75","title":"High Range Signal","explain":"Signal amplitude at upper threshold.","severity":"warn"},{"when":"factor < 75","title":"Nominal Operating Range","explain":"Within standard test envelope.","severity":"info"}]
+      combos_to_try: [{"set":{"factor":85},"lesson":"High amplitude test combo."}]
+    common_mistakes: []
+    quiz: []
+    exam_tags: ["diagnostic", "sample"]

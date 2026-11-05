@@ -1,0 +1,32 @@
+part:
+  id: sample-part-05
+  co: CO-1
+  title: Sample Prefix Decomposition Tree Test
+  order: 104
+  concept_ids:
+    - subnet_tree-sample-test
+concepts:
+  - id: subnet_tree-sample-test
+    code: "TEST-SUBNET_TREE"
+    title: "Prefix Decomposition Tree Test"
+    session: 1
+    skilling_exp: 1
+    btl: 3
+    difficulty: 2
+    prereqs: []
+    eli5: "Interactive verification suite for subnet_tree visualizer in Rogue telemetry system."
+    key_points:
+      - "Driven strictly by params, values, outputs, outcomes contract."
+      - "Features live bidirectional interaction and animation."
+    deep_dive: "Detailed operational verification of subnet_tree component under Rogue dashboard engine."
+    formulas: []
+    viz:
+      type: "subnet_tree"
+      description: "Sample test suite for subnet_tree"
+      params: [{"name":"cidr","label":"Subnet Prefix Mask","min":24,"max":26,"step":1,"default":25,"unit":"bits"}]
+      compute: {"total_subnets":"pow(2, cidr - 24)"}
+      outcomes: [{"when":"cidr == 26","title":"4 Small Subnets Allocated","explain":"Split into four /26 blocks.","severity":"info"},{"when":"cidr == 24","title":"Single Flat /24 Network","explain":"No VLSM division active.","severity":"warn"}]
+      combos_to_try: [{"set":{"cidr":26},"lesson":"Decompose /24 into four /26 blocks."}]
+    common_mistakes: []
+    quiz: []
+    exam_tags: ["diagnostic", "sample"]

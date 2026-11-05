@@ -1,0 +1,342 @@
+part:
+  id: co6_03
+  co: CO-6
+  title: Queue Disciplines and Their Bounds
+  order: 3
+  concept_ids:
+  - co6-fifo-queues
+  - co6-priority-queuing
+  - co6-fair-queuing
+concepts:
+- id: co6-fifo-queues
+  code: CN-CO6.03.1
+  title: FIFO Queueing and Its Bounds
+  session: 22
+  skilling_exp: 24
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co6-latency-budget
+  eli5: A FIFO queue serves packets in the order they arrive. It is simple and predictable in ordering, but it does
+    not distinguish urgent traffic from bulk traffic.
+  key_points:
+  - FIFO preserves arrival order within the queue.
+  - Packets wait behind earlier packets even when they have different application importance.
+  - Queue occupancy and service rate influence waiting time.
+  - A full queue can increase delay and cause packet loss.
+  - Measure queue depth and waiting time under representative load.
+  deep_dive: FIFO Queueing and Its Bounds is part of CO-6, Predictability — Real-time, Multicast and QoS. The purpose
+    of this topic is to make network performance measurable and defensible for time-sensitive communication. Begin
+    by defining the traffic, endpoints, path and service target. Keep delay, delay variation, loss, bandwidth and
+    clock error as distinct quantities; they affect applications in different ways and should not be collapsed into
+    one vague quality score. The formula in this concept is a simplified model for organizing a calculation. Identify
+    every variable, retain its units and state assumptions before using it. The worked example demonstrates the
+    arithmetic, but a production result must use measurements from the actual path and traffic profile. Use the
+    visualization to explore how changing one input affects the simplified relationship, then compare that result
+    with packet captures, counters or device measurements. For the course integration task, every component contribution
+    should be named, measured and totalled. Evaluate the system under sustained contention rather than only during
+    an idle period, and report p50 and p99 values against explicit targets. The result should include enough evidence
+    for another engineer to reproduce the measurement and defend the conclusion.
+  formulas:
+  - id: co6-fifo-queues-formula
+    latex: D_queue ≈ Q/R
+    vars: 'D_queue: serialization wait estimate; Q: queued bits ahead; R: service rate in bits per second'
+    example: A 240,000-bit queue ahead of a packet on a 12 Mbit/s link represents about 20 ms of serialization time.
+  viz:
+    type: queue_curve
+    description: Explore fifo queueing and its bounds by changing the measured value and reference, then interpret
+      the result against the stated performance objective.
+    params:
+    - name: input_a
+      label: Measured value
+      min: 1
+      max: 100
+      step: 1
+      default: 30
+      unit: units
+    - name: input_b
+      label: Target or reference
+      min: 1
+      max: 100
+      step: 1
+      default: 40
+      unit: units
+    compute:
+      difference: input_b - input_a
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a <= input_b
+      title: Measured value is within reference
+      explain: The selected value does not exceed the reference in this simplified comparison.
+      severity: info
+    - when: input_a > input_b
+      title: Measured value exceeds reference
+      explain: The selected value exceeds the reference; inspect the relevant budget or operating condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 30
+        input_b: 40
+      lesson: Start with a measured value below or within the reference.
+    - set:
+        input_a: 75
+        input_b: 40
+      lesson: Increase the measured value beyond the reference and explain the operational consequence.
+  common_mistakes:
+  - Assuming FIFO provides priority to voice traffic.
+  - Ignoring queue growth when arrival rate approaches service rate.
+  - Treating the configured queue limit as a delay guarantee.
+  quiz:
+  - q: What is the main engineering concern in fifo queueing and its bounds?
+    options:
+    - Measure and manage the performance behaviour described by fifo queueing and its bounds
+    - Assume every packet has identical delay
+    - Replace all network protocols with one mechanism
+    - Optimize only the peak throughput
+    answer: 0
+    why: The topic focuses on making the named performance behaviour measurable and controllable.
+  - q: Why should performance be evaluated under sustained contention?
+    options:
+    - It removes the need for measurement
+    - It reveals queueing and tail behaviour that may not appear on an idle path
+    - It guarantees every packet will be delayed equally
+    - It makes clock synchronization unnecessary
+    answer: 1
+    why: Load exposes resource contention and tail effects that quiet-period tests can hide.
+  - q: Which evidence makes a performance claim defensible?
+    options:
+    - A single best-case ping
+    - A screenshot of a dashboard without context
+    - Named path components, a documented method, measured results and stated targets
+    - An estimate based only on the configured link speed
+    answer: 2
+    why: A reproducible claim requires explicit measurements, method and acceptance criteria.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small measurement or calculation exercise for fifo queueing and its bounds. State the traffic
+    conditions and target, record the result, and explain whether the result meets the target.
+- id: co6-priority-queuing
+  code: CN-CO6.03.2
+  title: Priority Queuing and Traffic Classes
+  session: 22
+  skilling_exp: 24
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co6-fifo-queues
+  eli5: Priority queuing serves higher-priority traffic before lower-priority traffic. It can protect time-sensitive
+    packets, but an overloaded high-priority class can starve other traffic.
+  key_points:
+  - Classify traffic according to an explicit policy.
+  - High-priority queues can reduce waiting time for selected packets.
+  - Unbounded strict priority can cause starvation of lower classes.
+  - Police or shape priority traffic to prevent misuse and overload.
+  - Validate delay for both protected and non-priority classes.
+  deep_dive: Priority Queuing and Traffic Classes is part of CO-6, Predictability — Real-time, Multicast and QoS.
+    The purpose of this topic is to make network performance measurable and defensible for time-sensitive communication.
+    Begin by defining the traffic, endpoints, path and service target. Keep delay, delay variation, loss, bandwidth
+    and clock error as distinct quantities; they affect applications in different ways and should not be collapsed
+    into one vague quality score. The formula in this concept is a simplified model for organizing a calculation.
+    Identify every variable, retain its units and state assumptions before using it. The worked example demonstrates
+    the arithmetic, but a production result must use measurements from the actual path and traffic profile. Use
+    the visualization to explore how changing one input affects the simplified relationship, then compare that result
+    with packet captures, counters or device measurements. For the course integration task, every component contribution
+    should be named, measured and totalled. Evaluate the system under sustained contention rather than only during
+    an idle period, and report p50 and p99 values against explicit targets. The result should include enough evidence
+    for another engineer to reproduce the measurement and defend the conclusion.
+  formulas:
+  - id: co6-priority-queuing-formula
+    latex: U = R_high/R_link
+    vars: 'U: fraction of link service consumed by high-priority traffic; R_high: high-priority rate; R_link: link
+      rate'
+    example: If high-priority traffic consumes 3 Mbit/s on a 10 Mbit/s link, it uses 30% of link capacity.
+  viz:
+    type: queue_curve
+    description: Explore priority queuing and traffic classes by changing the measured value and reference, then
+      interpret the result against the stated performance objective.
+    params:
+    - name: input_a
+      label: Measured value
+      min: 1
+      max: 100
+      step: 1
+      default: 30
+      unit: units
+    - name: input_b
+      label: Target or reference
+      min: 1
+      max: 100
+      step: 1
+      default: 40
+      unit: units
+    compute:
+      difference: input_b - input_a
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a <= input_b
+      title: Measured value is within reference
+      explain: The selected value does not exceed the reference in this simplified comparison.
+      severity: info
+    - when: input_a > input_b
+      title: Measured value exceeds reference
+      explain: The selected value exceeds the reference; inspect the relevant budget or operating condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 30
+        input_b: 40
+      lesson: Start with a measured value below or within the reference.
+    - set:
+        input_a: 75
+        input_b: 40
+      lesson: Increase the measured value beyond the reference and explain the operational consequence.
+  common_mistakes:
+  - Marking all traffic as high priority.
+  - Checking only the priority class and ignoring starvation.
+  - Assuming priority queuing creates additional link capacity.
+  quiz:
+  - q: What is the main engineering concern in priority queuing and traffic classes?
+    options:
+    - Measure and manage the performance behaviour described by priority queuing and traffic classes
+    - Assume every packet has identical delay
+    - Replace all network protocols with one mechanism
+    - Optimize only the peak throughput
+    answer: 0
+    why: The topic focuses on making the named performance behaviour measurable and controllable.
+  - q: Why should performance be evaluated under sustained contention?
+    options:
+    - It removes the need for measurement
+    - It reveals queueing and tail behaviour that may not appear on an idle path
+    - It guarantees every packet will be delayed equally
+    - It makes clock synchronization unnecessary
+    answer: 1
+    why: Load exposes resource contention and tail effects that quiet-period tests can hide.
+  - q: Which evidence makes a performance claim defensible?
+    options:
+    - A single best-case ping
+    - A screenshot of a dashboard without context
+    - Named path components, a documented method, measured results and stated targets
+    - An estimate based only on the configured link speed
+    answer: 2
+    why: A reproducible claim requires explicit measurements, method and acceptance criteria.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small measurement or calculation exercise for priority queuing and traffic classes. State the
+    traffic conditions and target, record the result, and explain whether the result meets the target.
+- id: co6-fair-queuing
+  code: CN-CO6.03.3
+  title: Fair Queuing and Service Sharing
+  session: 22
+  skilling_exp: 24
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co6-fifo-queues
+  eli5: Fair queuing shares link service among flows so that one busy flow cannot automatically consume all available
+    capacity. The exact fairness depends on the scheduler and its weights.
+  key_points:
+  - Fair queuing separates traffic into flows or classes for scheduling.
+  - Service can be shared approximately equally or according to configured weights.
+  - A busy flow should not monopolize the entire output link.
+  - Flow identification and scheduler configuration affect the result.
+  - Evaluate per-flow throughput and latency under competing traffic.
+  deep_dive: Fair Queuing and Service Sharing is part of CO-6, Predictability — Real-time, Multicast and QoS. The
+    purpose of this topic is to make network performance measurable and defensible for time-sensitive communication.
+    Begin by defining the traffic, endpoints, path and service target. Keep delay, delay variation, loss, bandwidth
+    and clock error as distinct quantities; they affect applications in different ways and should not be collapsed
+    into one vague quality score. The formula in this concept is a simplified model for organizing a calculation.
+    Identify every variable, retain its units and state assumptions before using it. The worked example demonstrates
+    the arithmetic, but a production result must use measurements from the actual path and traffic profile. Use
+    the visualization to explore how changing one input affects the simplified relationship, then compare that result
+    with packet captures, counters or device measurements. For the course integration task, every component contribution
+    should be named, measured and totalled. Evaluate the system under sustained contention rather than only during
+    an idle period, and report p50 and p99 values against explicit targets. The result should include enough evidence
+    for another engineer to reproduce the measurement and defend the conclusion.
+  formulas:
+  - id: co6-fair-queuing-formula
+    latex: R_i = w_i/sum(w) * R
+    vars: 'R_i: idealized share for flow i; w_i: its weight; R: link service rate'
+    example: With weights 1 and 3 on a 20 Mbit/s link, idealized shares are 5 and 15 Mbit/s when both flows are
+      backlogged.
+  viz:
+    type: bar_compare
+    description: Explore fair queuing and service sharing by changing the measured value and reference, then interpret
+      the result against the stated performance objective.
+    params:
+    - name: input_a
+      label: Measured value
+      min: 1
+      max: 100
+      step: 1
+      default: 30
+      unit: units
+    - name: input_b
+      label: Target or reference
+      min: 1
+      max: 100
+      step: 1
+      default: 40
+      unit: units
+    compute:
+      difference: input_b - input_a
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a <= input_b
+      title: Measured value is within reference
+      explain: The selected value does not exceed the reference in this simplified comparison.
+      severity: info
+    - when: input_a > input_b
+      title: Measured value exceeds reference
+      explain: The selected value exceeds the reference; inspect the relevant budget or operating condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 30
+        input_b: 40
+      lesson: Start with a measured value below or within the reference.
+    - set:
+        input_a: 75
+        input_b: 40
+      lesson: Increase the measured value beyond the reference and explain the operational consequence.
+  common_mistakes:
+  - Assuming every scheduler implements identical fairness.
+  - Ignoring weights and active-flow count.
+  - Confusing fair service with a guaranteed fixed latency.
+  quiz:
+  - q: What is the main engineering concern in fair queuing and service sharing?
+    options:
+    - Measure and manage the performance behaviour described by fair queuing and service sharing
+    - Assume every packet has identical delay
+    - Replace all network protocols with one mechanism
+    - Optimize only the peak throughput
+    answer: 0
+    why: The topic focuses on making the named performance behaviour measurable and controllable.
+  - q: Why should performance be evaluated under sustained contention?
+    options:
+    - It removes the need for measurement
+    - It reveals queueing and tail behaviour that may not appear on an idle path
+    - It guarantees every packet will be delayed equally
+    - It makes clock synchronization unnecessary
+    answer: 1
+    why: Load exposes resource contention and tail effects that quiet-period tests can hide.
+  - q: Which evidence makes a performance claim defensible?
+    options:
+    - A single best-case ping
+    - A screenshot of a dashboard without context
+    - Named path components, a documented method, measured results and stated targets
+    - An estimate based only on the configured link speed
+    answer: 2
+    why: A reproducible claim requires explicit measurements, method and acceptance criteria.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small measurement or calculation exercise for fair queuing and service sharing. State the traffic
+    conditions and target, record the result, and explain whether the result meets the target.

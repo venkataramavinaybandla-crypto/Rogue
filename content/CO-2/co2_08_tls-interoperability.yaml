@@ -1,0 +1,471 @@
+part:
+  id: co2-08
+  co: CO-2
+  title: TLS, ALPN and Interoperability
+  order: 8
+  concept_ids:
+  - co2-tls-certificate-validation
+  - co2-alpn-tls13
+  - co2-tls-termination
+  - co2-interoperability-gate
+concepts:
+- id: co2-tls-certificate-validation
+  code: CN-CO2.8.1
+  title: TLS certificate validation and trust
+  session: 8
+  skilling_exp: 12
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co2-http11
+  eli5: TLS uses certificates to help a client verify the identity of the server it is talking to.
+  key_points:
+  - A certificate binds an identity to a public key.
+  - A client validates the certificate chain against trusted certificate authorities.
+  - The requested hostname must match the certificate identity.
+  - Validity periods and trust-chain constraints affect validation.
+  - Encryption without correct identity validation does not prove the peer is genuine.
+  deep_dive: TLS certificate validation is part of authenticating the server, not merely encrypting bytes.
+    A server presents a certificate containing its public key and identity information, usually as part
+    of a chain leading to a trusted certificate authority. The client checks whether the chain can be
+    built to a trust anchor, whether the certificate is within its validity period, and whether the requested
+    hostname matches the certificate's identity. Additional constraints and signature checks also apply.
+    If validation fails, the client should not silently treat the connection as authenticated. A secure
+    channel to the wrong endpoint can still expose data to an attacker, so encryption and authentication
+    must be considered together. In the course's TLS termination work, certificate configuration and validation
+    must be tested as part of the end-to-end service, not treated as a cosmetic browser detail. TLS encryption
+    protects a channel; certificate validation helps establish who is on the other end.
+  formulas: []
+  viz:
+    type: custom
+    description: Evaluate a simplified certificate identity and trust check.
+    params:
+    - name: chain_trusted
+      label: Chain trusted
+      min: 0
+      max: 1
+      step: 1
+      default: 1
+      unit: 0=no, 1=yes
+    - name: hostname_matches
+      label: Hostname matches
+      min: 0
+      max: 1
+      step: 1
+      default: 1
+      unit: 0=no, 1=yes
+    - name: within_validity
+      label: Within validity
+      min: 0
+      max: 1
+      step: 1
+      default: 1
+      unit: 0=no, 1=yes
+    compute:
+      validation_pass: chain_trusted * hostname_matches * within_validity
+    outcomes:
+    - when: validation_pass == 1
+      title: Validation checks pass
+      explain: All three simplified checks are satisfied.
+      severity: info
+    - when: chain_trusted == 1 && hostname_matches == 1 && within_validity == 0
+      title: Certificate outside validity
+      explain: The identity and chain checks pass, but the validity check fails.
+      severity: fail
+    - when: chain_trusted == 0 || hostname_matches == 0
+      title: Trust or identity mismatch
+      explain: The chain is untrusted or the requested hostname does not match.
+      severity: fail
+    combos_to_try:
+    - set:
+        chain_trusted: 1
+        hostname_matches: 1
+        within_validity: 1
+      lesson: All simplified checks pass.
+    - set:
+        chain_trusted: 1
+        hostname_matches: 0
+        within_validity: 1
+      lesson: A trusted certificate for another name is not valid for this hostname.
+    - set:
+        chain_trusted: 1
+        hostname_matches: 1
+        within_validity: 0
+      lesson: An expired or not-yet-valid certificate fails validation.
+  common_mistakes:
+  - Assuming encryption alone authenticates the server.
+  - Ignoring hostname matching.
+  - Accepting an untrusted chain without an explicit trust decision.
+  quiz:
+  - q: 'What does a server certificate bind to a public key? '
+    options:
+    - An identity
+    - A DNS TTL
+    - An HTTP body
+    - A TCP window
+    answer: 0
+    why: A certificate associates identity information with a public key.
+  - q: 'Why must the hostname be checked? '
+    options:
+    - To verify the certificate is for the intended server name
+    - To set TCP MSS
+    - To enable UDP
+    - To calculate RTO
+    answer: 0
+    why: Hostname validation helps authenticate the intended endpoint.
+  - q: 'Does an encrypted connection automatically prove the peer''s identity? '
+    options:
+    - 'Yes'
+    - 'No'
+    - Only on port 443
+    - Only with HTTP/1.1
+    answer: 1
+    why: Identity validation is distinct from encryption.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Test a TLS endpoint with a trusted certificate and a hostname mismatch; record the validation
+    result.
+- id: co2-alpn-tls13
+  code: CN-CO2.8.2
+  title: ALPN and TLS 1.3 negotiation
+  session: 8
+  skilling_exp: 12
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co2-tls-certificate-validation
+  eli5: ALPN lets peers agree on the application protocol during the TLS handshake.
+  key_points:
+  - ALPN stands for Application-Layer Protocol Negotiation.
+  - A client can advertise supported application protocols.
+  - The server selects a protocol supported by both sides.
+  - TLS 1.3 modernizes the TLS handshake and key establishment.
+  - The negotiated application protocol determines how encrypted application data is interpreted.
+  deep_dive: Application-Layer Protocol Negotiation allows a client and server to agree on an application
+    protocol as part of the TLS handshake. The client advertises supported protocol identifiers, and the
+    server selects one that it also supports. This avoids relying on separate application-layer guesswork
+    after the secure connection is established. For example, the peers can negotiate the HTTP protocol
+    variant they will use over the TLS connection. TLS 1.3 changes the handshake and cryptographic negotiation
+    compared with earlier TLS versions, while retaining the goal of establishing authenticated keys for
+    protected communication. ALPN is not itself an encryption algorithm or a certificate check; it is
+    a protocol-selection mechanism carried within TLS negotiation. Interoperability testing should verify
+    that both sides agree on the expected application protocol and then exchange application data successfully.
+    ALPN selects the application protocol; certificate validation authenticates the peer; TLS protects
+    the channel.
+  formulas: []
+  viz:
+    type: custom
+    description: Compare client and server ALPN support.
+    params:
+    - name: client_protocols
+      label: Client supported protocols
+      min: 1
+      max: 8
+      step: 1
+      default: 3
+      unit: protocols
+    - name: server_protocols
+      label: Server supported protocols
+      min: 1
+      max: 8
+      step: 1
+      default: 2
+      unit: protocols
+    - name: common_protocols
+      label: Common protocols
+      min: 0
+      max: 8
+      step: 1
+      default: 1
+      unit: protocols
+    compute:
+      negotiation_possible: min(client_protocols, server_protocols, common_protocols)
+    outcomes:
+    - when: common_protocols >= 1
+      title: Protocol overlap
+      explain: At least one application protocol is supported by both peers.
+      severity: info
+    - when: common_protocols == 0 && client_protocols > 0 && server_protocols > 0
+      title: No common protocol
+      explain: Both peers support protocols, but their advertised sets do not overlap.
+      severity: fail
+    combos_to_try:
+    - set:
+        client_protocols: 3
+        server_protocols: 2
+        common_protocols: 1
+      lesson: At least one protocol can be negotiated.
+    - set:
+        client_protocols: 4
+        server_protocols: 3
+        common_protocols: 0
+      lesson: Negotiation fails without a shared protocol.
+    - set:
+        client_protocols: 1
+        server_protocols: 1
+        common_protocols: 1
+      lesson: A single common protocol is selected.
+  common_mistakes:
+  - Treating ALPN as a certificate-validation mechanism.
+  - Assuming TLS 1.3 itself chooses HTTP/1.1 or HTTP/2 without ALPN context.
+  - Ignoring protocol mismatch after a successful TLS handshake.
+  quiz:
+  - q: 'What does ALPN negotiate? '
+    options:
+    - The application protocol
+    - The DNS TTL
+    - The TCP receive window
+    - The server's IP address
+    answer: 0
+    why: ALPN selects the application protocol for the secure connection.
+  - q: 'What must be true for ALPN selection to succeed? '
+    options:
+    - At least one protocol is supported by both peers
+    - Both peers use different protocols
+    - The certificate is self-signed
+    - The TCP connection uses UDP
+    answer: 0
+    why: The server must select a protocol supported by both sides.
+  - q: 'Is ALPN an encryption algorithm? '
+    options:
+    - 'Yes'
+    - 'No'
+    - Only in TLS 1.3
+    - Only for DNS
+    answer: 1
+    why: ALPN is a protocol negotiation extension, not an encryption algorithm.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Capture a TLS handshake and identify the offered and selected ALPN protocol.
+- id: co2-tls-termination
+  code: CN-CO2.8.3
+  title: TLS termination and application data protection
+  session: 8
+  skilling_exp: 12
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co2-tls-certificate-validation
+  - co2-alpn-tls13
+  eli5: TLS termination is the point where a service ends the encrypted connection and processes the protected
+    traffic.
+  key_points:
+  - A TLS terminator performs the TLS handshake with the client.
+  - The terminator presents the configured certificate and negotiates parameters.
+  - After termination, the service processes decrypted application data.
+  - A separate backend connection may or may not use TLS.
+  - The security boundary and trust between terminator and backend must be explicit.
+  deep_dive: 'TLS termination describes where the encrypted client connection is ended so that a server,
+    proxy or load balancer can process the application data. The terminating component performs the TLS
+    handshake, presents the certificate, validates the client-side negotiation and obtains the protected
+    application stream. After termination, the component can parse HTTP requests, route them or forward
+    them to a backend. Whether the backend leg is encrypted is a separate architecture decision; it should
+    be based on the trust boundary and deployment requirements. Termination does not mean that data remains
+    encrypted everywhere inside the service. It means the TLS protection ends at a defined point, and
+    the system must secure the subsequent processing and forwarding path appropriately. The course implementation
+    should document which component owns the certificate, where plaintext exists and how the backend connection
+    is handled. Document the exact TLS boundary: identify where encryption ends and how traffic is protected
+    afterward.'
+  formulas: []
+  viz:
+    type: packet_flow
+    description: Model the encrypted client leg and the backend leg.
+    params:
+    - name: backend_tls
+      label: Backend connection encrypted
+      min: 0
+      max: 1
+      step: 1
+      default: 1
+      unit: 0=no, 1=yes
+    compute:
+      encrypted_legs: 1 + backend_tls
+    outcomes:
+    - when: backend_tls == 1
+      title: TLS on both legs
+      explain: The client-facing and backend-facing legs are encrypted in this simplified model.
+      severity: info
+    - when: backend_tls == 0
+      title: Plaintext backend leg
+      explain: TLS ends at the terminator; the backend leg is not encrypted in this model.
+      severity: warn
+    combos_to_try:
+    - set:
+        backend_tls: 1
+      lesson: Both legs use TLS.
+    - set:
+        backend_tls: 0
+      lesson: The terminator forwards plaintext to the backend; assess the trust boundary.
+  common_mistakes:
+  - Assuming TLS termination encrypts every internal hop.
+  - Failing to identify where plaintext is processed.
+  - Treating a proxy certificate as proof of backend identity.
+  quiz:
+  - q: 'Where does TLS termination occur? '
+    options:
+    - At the component ending the client TLS connection
+    - At the DNS root
+    - At every router
+    - At the TCP sequence number
+    answer: 0
+    why: The TLS terminator ends the encrypted client connection.
+  - q: 'Does client-facing TLS automatically encrypt the backend leg? '
+    options:
+    - 'Yes'
+    - 'No'
+    - Only with HTTP/1.1
+    - Only on localhost
+    answer: 1
+    why: Backend encryption is a separate design decision.
+  - q: 'What should a deployment document about termination? '
+    options:
+    - Where plaintext exists and how backend traffic is protected
+    - Only the server's port number
+    - Only the DNS TTL
+    - Only the HTTP method
+    answer: 0
+    why: The security boundary must be explicit.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Draw the TLS termination point and mark every network leg that carries plaintext or encrypted
+    data.
+- id: co2-interoperability-gate
+  code: CN-CO2.8.4
+  title: End-to-end TLS and Linux TCP interoperability gate
+  session: 8
+  skilling_exp: 12
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co2-tls-termination
+  - co2-tcp-reassembly-flow-control
+  - co2-fast-retransmit-loss-recovery
+  eli5: Interoperability proves that your implementation communicates correctly with an unmodified peer.
+  key_points:
+  - The gate requires a bidirectional 1 MB transfer.
+  - The peer is an unmodified Linux kernel TCP peer.
+  - The network is tested under injected delay and loss.
+  - Both directions must complete and data integrity must be checked.
+  - A successful local-only test is not sufficient evidence of interoperability.
+  deep_dive: The interoperability gate is an end-to-end proof that the implementation works with an independent,
+    unmodified Linux kernel TCP peer. The specified transfer is bidirectional and totals one megabyte
+    of data in each direction as defined by the test harness; the test must verify that the received bytes
+    match what was sent. Injected delay and packet loss exercise retransmission, acknowledgement handling,
+    reassembly and congestion response rather than allowing only an ideal local path to pass. The implementation
+    must also complete the relevant TLS termination and application-protocol steps where required by the
+    experiment. A successful test against a custom peer that shares the same assumptions is weaker evidence
+    than communication with an unmodified kernel implementation. Record the test conditions, direction,
+    byte counts, integrity result and observed recovery behaviour so the result is reproducible. The gate
+    is a reproducible compatibility test, not merely a successful connection or one-way upload.
+  formulas: []
+  viz:
+    type: custom
+    description: Track the required bidirectional transfer completion.
+    params:
+    - name: sent_mb
+      label: Sent data
+      min: 0
+      max: 1
+      step: 0.01
+      default: 1
+      unit: MB
+    - name: received_mb
+      label: Received data
+      min: 0
+      max: 1
+      step: 0.01
+      default: 1
+      unit: MB
+    - name: integrity_ok
+      label: Integrity verified
+      min: 0
+      max: 1
+      step: 1
+      default: 1
+      unit: 0=no, 1=yes
+    - name: impairment_enabled
+      label: Delay/loss injected
+      min: 0
+      max: 1
+      step: 1
+      default: 1
+      unit: 0=no, 1=yes
+    compute:
+      complete_gate: min(sent_mb, received_mb) * integrity_ok * impairment_enabled
+    outcomes:
+    - when: sent_mb >= 1 && received_mb >= 1 && integrity_ok == 1 && impairment_enabled == 1
+      title: Gate passed
+      explain: Both directions transferred at least 1 MB, integrity passed and impairment was enabled.
+      severity: info
+    - when: sent_mb >= 1 && received_mb >= 1 && integrity_ok == 1 && impairment_enabled == 0
+      title: Impairment missing
+      explain: Transfer and integrity passed, but the required impaired-network condition was not tested.
+      severity: warn
+    - when: sent_mb < 1 || received_mb < 1 || integrity_ok == 0
+      title: Gate failed
+      explain: A direction is incomplete or data integrity failed.
+      severity: fail
+    combos_to_try:
+    - set:
+        sent_mb: 1
+        received_mb: 1
+        integrity_ok: 1
+        impairment_enabled: 1
+      lesson: All gate conditions are satisfied.
+    - set:
+        sent_mb: 1
+        received_mb: 1
+        integrity_ok: 1
+        impairment_enabled: 0
+      lesson: Repeat with injected delay and loss.
+    - set:
+        sent_mb: 1
+        received_mb: 0.5
+        integrity_ok: 1
+        impairment_enabled: 1
+      lesson: The reverse direction is incomplete.
+  common_mistakes:
+  - Testing only one transfer direction.
+  - Using a modified peer instead of the unmodified Linux TCP peer.
+  - Omitting delay/loss injection or data-integrity verification.
+  quiz:
+  - q: 'What peer is required by the interoperability gate? '
+    options:
+    - An unmodified Linux kernel TCP peer
+    - Only a custom client
+    - A DNS root server
+    - A browser mock
+    answer: 0
+    why: The gate explicitly requires an unmodified Linux kernel TCP peer.
+  - q: 'What transfer direction is required? '
+    options:
+    - Bidirectional
+    - Upload only
+    - Download only
+    - No data transfer
+    answer: 0
+    why: The gate requires transfer in both directions.
+  - q: 'Why inject delay and loss? '
+    options:
+    - To exercise transport recovery under impairment
+    - To change the HTTP method
+    - To expire DNS records
+    - To avoid TCP acknowledgements
+    answer: 0
+    why: Impairment tests recovery and robustness beyond an ideal network.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Run the bidirectional 1 MB interoperability test against an unmodified Linux TCP peer with
+    injected delay and loss; save the integrity and transfer results.

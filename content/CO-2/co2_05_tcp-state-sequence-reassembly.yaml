@@ -1,0 +1,445 @@
+part:
+  id: co2-05
+  co: CO-2
+  title: TCP State, Sequencing and Reassembly
+  order: 5
+  concept_ids:
+  - co2-tcp-state-machine
+  - co2-tcp-sequence-numbers
+  - co2-tcp-reassembly-flow-control
+  - co2-tcp-teardown-nagle-delayed-ack
+concepts:
+- id: co2-tcp-state-machine
+  code: CN-CO2.5.1
+  title: TCP connection state machine
+  session: 7
+  skilling_exp: 9
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co2-socket-system-calls
+  eli5: TCP moves through defined states as a connection is opened, used and closed.
+  key_points:
+  - A TCP connection is identified by endpoint information.
+  - The state machine tracks connection establishment, data transfer and teardown.
+  - The three-way handshake establishes synchronized connection state.
+  - FIN and ACK exchange participates in orderly connection closure.
+  - TIME_WAIT helps handle delayed segments and connection reuse safely.
+  deep_dive: 'TCP connection management is described by a state machine. A client commonly moves from
+    CLOSED to SYN-SENT while initiating a connection, and the server moves from LISTEN through SYN-RECEIVED
+    after receiving a connection request. The three-way handshake synchronizes initial sequence numbers
+    and confirms that both sides can communicate. Once established, the connection carries data until
+    one or both endpoints initiate shutdown. TCP supports half-close behaviour: one direction can be closed
+    while the other continues to send. FIN and ACK segments advance the teardown sequence, and TIME_WAIT
+    is retained by an endpoint to help ensure that delayed segments from an earlier connection do not
+    interfere with a later connection using the same endpoint pair. A state diagram is more than vocabulary:
+    it helps explain why a socket may not be immediately reusable and why packet traces show different
+    flags at different stages. Use the state machine to interpret SYN, ACK and FIN traces rather than
+    treating TCP as a single connect/disconnect event.'
+  formulas: []
+  viz:
+    type: state_machine
+    description: Explore the number of state transitions in a simplified connection lifecycle.
+    params:
+    - name: completed_steps
+      label: Completed lifecycle steps
+      min: 0
+      max: 6
+      step: 1
+      default: 3
+      unit: steps
+    compute:
+      remaining_steps: 6 - completed_steps
+    outcomes:
+    - when: completed_steps <= 1
+      title: Connection setup in progress
+      explain: Only the early handshake steps have completed.
+      severity: warn
+    - when: completed_steps > 1 && completed_steps < 6
+      title: Connection active or closing
+      explain: The connection has progressed beyond setup but teardown may remain.
+      severity: info
+    - when: completed_steps == 6
+      title: Lifecycle sequence complete
+      explain: All six illustrative lifecycle steps have completed.
+      severity: info
+    combos_to_try:
+    - set:
+        completed_steps: 1
+      lesson: The handshake is not yet complete.
+    - set:
+        completed_steps: 4
+      lesson: The connection has entered the closing sequence.
+    - set:
+        completed_steps: 6
+      lesson: The simplified lifecycle has completed.
+  common_mistakes:
+  - Assuming FIN closes both directions immediately.
+  - Confusing the listening socket with an established connection.
+  - Treating TIME_WAIT as an application error.
+  quiz:
+  - q: 'Which TCP mechanism synchronizes initial sequence numbers? '
+    options:
+    - Three-way handshake
+    - DNS lookup
+    - HTTP framing
+    - AIMD
+    answer: 0
+    why: The three-way handshake synchronizes connection state and initial sequence numbers.
+  - q: 'Which flag is associated with orderly TCP shutdown? '
+    options:
+    - FIN
+    - DNS
+    - TTL
+    - ALPN
+    answer: 0
+    why: FIN participates in TCP connection teardown.
+  - q: 'Why does TIME_WAIT exist? '
+    options:
+    - To help handle delayed segments and safe connection reuse
+    - To increase HTTP body size
+    - To cache DNS records
+    - To retransmit every packet
+    answer: 0
+    why: TIME_WAIT helps prevent delayed segments from contaminating a reused connection.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Draw the client and server TCP state transitions for connection establishment and orderly
+    close.
+- id: co2-tcp-sequence-numbers
+  code: CN-CO2.5.2
+  title: TCP sequence numbers and acknowledgements
+  session: 7
+  skilling_exp: 9
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co2-tcp-state-machine
+  eli5: TCP sequence numbers identify byte positions in the stream, and acknowledgements report received
+    progress.
+  key_points:
+  - TCP sequence numbers count bytes rather than application messages.
+  - An ACK acknowledges the next byte expected by the receiver.
+  - Sequence numbers wrap in a finite sequence-number space.
+  - The sender uses acknowledgements to track delivery progress.
+  - Retransmission may reuse sequence space for bytes that were not acknowledged.
+  deep_dive: TCP sequence numbers provide the byte-level ordering mechanism for the reliable stream. A
+    segment's sequence number identifies the position of its first data byte in the connection's sequence
+    space. The acknowledgement number conventionally indicates the next byte the receiver expects, thereby
+    cumulatively acknowledging earlier bytes. Sequence numbers are finite-width values and wrap around,
+    so comparisons must use TCP's sequence arithmetic rather than ordinary unbounded integer assumptions.
+    An application message may span multiple TCP segments, and a segment may contain bytes from more than
+    one application write. Acknowledgements therefore describe stream progress, not the completion of
+    an HTTP request or any other application message. When data is missing, acknowledgements and retransmission
+    behaviour help the sender identify which byte range still needs attention. Understanding byte offsets
+    is essential to implementing the course's reassembler. TCP sequence numbers describe byte positions;
+    ACK numbers describe the next byte expected.
+  formulas: []
+  viz:
+    type: bit_grid
+    description: Calculate the next expected byte after a contiguous received range.
+    params:
+    - name: start_seq
+      label: Starting sequence
+      min: 0
+      max: 1000000
+      step: 1
+      default: 1000
+      unit: byte index
+    - name: payload_bytes
+      label: Payload bytes
+      min: 1
+      max: 65535
+      step: 1
+      default: 500
+      unit: bytes
+    compute:
+      next_expected: start_seq + payload_bytes
+    outcomes:
+    - when: payload_bytes <= 536
+      title: Small segment example
+      explain: The payload is within a small illustrative segment size.
+      severity: info
+    - when: payload_bytes > 536 && payload_bytes <= 1460
+      title: Common-sized payload example
+      explain: The payload is within a common Ethernet-oriented illustrative range.
+      severity: warn
+    - when: payload_bytes > 1460
+      title: Large payload example
+      explain: The payload exceeds the common 1460-byte TCP payload example; path and options affect the
+        real MSS.
+      severity: fail
+    combos_to_try:
+    - set:
+        start_seq: 1000
+        payload_bytes: 100
+      lesson: The next expected byte is 1100.
+    - set:
+        start_seq: 1000
+        payload_bytes: 1460
+      lesson: The next expected byte is 2460.
+    - set:
+        start_seq: 1000
+        payload_bytes: 4000
+      lesson: A large byte range may be segmented.
+  common_mistakes:
+  - Treating sequence numbers as packet numbers.
+  - Treating an ACK as an application-level message acknowledgement.
+  - Ignoring sequence-number wraparound in real TCP implementations.
+  quiz:
+  - q: 'TCP sequence numbers count what? '
+    options:
+    - Bytes in the stream
+    - HTTP requests
+    - Packets only
+    - Connections
+    answer: 0
+    why: Sequence numbers identify byte positions.
+  - q: 'An ACK number normally indicates what? '
+    options:
+    - The next byte expected
+    - The last DNS TTL
+    - The HTTP status
+    - The number of open sockets
+    answer: 0
+    why: TCP acknowledgements are cumulative and indicate the next expected byte.
+  - q: 'Can one application write map to multiple TCP segments? '
+    options:
+    - 'Yes'
+    - No, never
+    - Only with UDP
+    - Only after TLS
+    answer: 0
+    why: TCP segments the byte stream independently of application write boundaries.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Given three segments and their sequence numbers, calculate the contiguous byte range and
+    next expected ACK.
+- id: co2-tcp-reassembly-flow-control
+  code: CN-CO2.5.3
+  title: Segment ordering, reassembly and TCP flow control
+  session: 7
+  skilling_exp: 9
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co2-tcp-sequence-numbers
+  eli5: A receiver reassembles bytes in order, while flow control prevents a sender from overrunning its
+    receive buffer.
+  key_points:
+  - Segments can arrive out of order even though TCP presents an ordered stream.
+  - A reassembler stores out-of-order byte ranges until gaps are filled.
+  - Duplicate data must not be delivered twice to the application.
+  - The advertised receive window communicates available receive-buffer capacity.
+  - Flow control protects the receiver; it is distinct from network congestion control.
+  deep_dive: 'A TCP receiver may observe segments in an order different from their sequence positions.
+    To provide an ordered byte stream to the application, a reassembler tracks received ranges, identifies
+    gaps and holds out-of-order data until missing bytes arrive. Duplicate or overlapping segments must
+    be handled without delivering the same byte twice. The receiver also advertises a receive window that
+    communicates how much additional data it can accept. This is TCP flow control: it protects the receiver
+    from being overwhelmed by a sender that transmits faster than the receive buffer can absorb. Flow
+    control is distinct from congestion control, which responds to conditions in the network path. A correct
+    receiver therefore combines sequence-space tracking, buffering, duplicate handling, acknowledgement
+    generation and advertised-window updates. The course reassembler experiment should test in-order delivery,
+    out-of-order arrival, retransmitted ranges and gaps. Flow control protects receiver capacity; congestion
+    control protects the network path.'
+  formulas: []
+  viz:
+    type: custom
+    description: Compare received bytes with the contiguous prefix available to the application.
+    params:
+    - name: received_bytes
+      label: Unique bytes received
+      min: 0
+      max: 100000
+      step: 1
+      default: 3000
+      unit: bytes
+    - name: contiguous_bytes
+      label: Contiguous bytes
+      min: 0
+      max: 100000
+      step: 1
+      default: 2000
+      unit: bytes
+    compute:
+      buffered_out_of_order: max(0, received_bytes - contiguous_bytes)
+    outcomes:
+    - when: contiguous_bytes == received_bytes
+      title: All received data is contiguous
+      explain: No out-of-order bytes remain buffered in this simplified view.
+      severity: info
+    - when: contiguous_bytes < received_bytes && received_bytes - contiguous_bytes <= 4096
+      title: Gap is buffering data
+      explain: Some received bytes are waiting behind a missing range.
+      severity: warn
+    - when: received_bytes - contiguous_bytes > 4096
+      title: Large out-of-order buffer
+      explain: A large amount of data is waiting for a gap to be filled.
+      severity: fail
+    combos_to_try:
+    - set:
+        received_bytes: 3000
+        contiguous_bytes: 3000
+      lesson: All bytes can be delivered in order.
+    - set:
+        received_bytes: 5000
+        contiguous_bytes: 2000
+      lesson: A gap blocks 3000 later bytes.
+    - set:
+        received_bytes: 20000
+        contiguous_bytes: 1000
+      lesson: A large out-of-order backlog needs attention.
+  common_mistakes:
+  - Delivering out-of-order bytes directly to an ordered-stream application.
+  - Confusing receive-window flow control with congestion control.
+  - Counting duplicate bytes as new application data.
+  quiz:
+  - q: 'What does a TCP receiver do with out-of-order data? '
+    options:
+    - Buffers it until gaps are filled
+    - Always delivers it immediately
+    - Converts it to DNS
+    - Drops all earlier bytes
+    answer: 0
+    why: The reassembler preserves stream order by waiting for missing ranges.
+  - q: 'What does the advertised receive window protect? '
+    options:
+    - Receiver buffer capacity
+    - DNS cache lifetime
+    - HTTP header syntax
+    - TLS certificate identity
+    answer: 0
+    why: The receive window is a flow-control mechanism for the receiver.
+  - q: 'Is TCP flow control the same as congestion control? '
+    options:
+    - 'Yes'
+    - 'No'
+    - Only in UDP
+    - Only during TIME_WAIT
+    answer: 1
+    why: Flow control protects the receiver; congestion control responds to network conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Implement a reassembly buffer that accepts out-of-order segments and delivers only the contiguous
+    prefix.
+- id: co2-tcp-teardown-nagle-delayed-ack
+  code: CN-CO2.5.4
+  title: Connection teardown, TIME_WAIT, Nagle and delayed ACK
+  session: 7
+  skilling_exp: 9
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co2-tcp-state-machine
+  - co2-tcp-sequence-numbers
+  eli5: TCP teardown and small-packet behaviours affect connection lifecycle and interactive latency.
+  key_points:
+  - FIN closes one direction of a TCP stream.
+  - TIME_WAIT allows delayed segments to expire before endpoint reuse.
+  - Nagle's algorithm can coalesce small writes while data is unacknowledged.
+  - Delayed ACK postpones some acknowledgements briefly to reduce traffic.
+  - Their interaction can affect latency for small request-response exchanges.
+  deep_dive: 'TCP connection teardown is a protocol exchange, not simply an immediate removal of all state.
+    FIN indicates that an endpoint has no more data to send in one direction, and the peer can continue
+    sending until it also closes its direction. TIME_WAIT is part of safe teardown and protects against
+    delayed segments from an earlier connection. Two TCP behaviours can influence small writes: Nagle''s
+    algorithm attempts to reduce tiny segments by waiting while previously sent data remains unacknowledged,
+    while delayed ACK postpones some acknowledgements briefly in the hope that an acknowledgement can
+    be combined with outgoing data. In some interactive patterns, their timing can interact and add latency.
+    These mechanisms are not universally harmful; they are trade-offs in transport efficiency. The course
+    should connect them to packet traces and measured response behaviour rather than treating them as
+    generic switches to disable. Analyze Nagle and delayed ACK as timing mechanisms whose interaction
+    depends on the application exchange pattern.'
+  formulas: []
+  viz:
+    type: timeline
+    description: Estimate a simplified small-write wait using RTT and a delayed-ACK interval.
+    params:
+    - name: rtt_ms
+      label: RTT
+      min: 1
+      max: 500
+      step: 1
+      default: 40
+      unit: ms
+    - name: delayed_ack_ms
+      label: Delayed ACK interval
+      min: 0
+      max: 500
+      step: 1
+      default: 40
+      unit: ms
+    compute:
+      combined_wait_ms: max(rtt_ms, delayed_ack_ms)
+    outcomes:
+    - when: combined_wait_ms <= 40
+      title: Short illustrative wait
+      explain: The larger of the two timing values is at most 40 ms.
+      severity: info
+    - when: combined_wait_ms > 40 && combined_wait_ms <= 150
+      title: Visible wait
+      explain: The simplified interaction can add a noticeable pause.
+      severity: warn
+    - when: combined_wait_ms > 150
+      title: Long wait case
+      explain: The selected timing values indicate a substantial potential wait.
+      severity: fail
+    combos_to_try:
+    - set:
+        rtt_ms: 20
+        delayed_ack_ms: 20
+      lesson: A short timing example.
+    - set:
+        rtt_ms: 40
+        delayed_ack_ms: 100
+      lesson: Delayed acknowledgement timing dominates this simplified view.
+    - set:
+        rtt_ms: 200
+        delayed_ack_ms: 40
+      lesson: Network RTT dominates the example.
+  common_mistakes:
+  - Assuming TIME_WAIT means the application failed to close.
+  - Assuming Nagle and delayed ACK always cause a delay.
+  - Treating the simplified max formula as a complete TCP timing model.
+  quiz:
+  - q: 'What does FIN indicate? '
+    options:
+    - No more data will be sent in that direction
+    - The DNS cache expired
+    - The HTTP body is complete
+    - The receive window is zero
+    answer: 0
+    why: FIN closes one direction of the TCP stream.
+  - q: 'What is one purpose of TIME_WAIT? '
+    options:
+    - Allow delayed segments to expire before reuse
+    - Increase the congestion window
+    - Cache HTTP headers
+    - Perform TLS validation
+    answer: 0
+    why: TIME_WAIT helps protect a reused connection from old delayed segments.
+  - q: 'What does Nagle''s algorithm try to reduce? '
+    options:
+    - Tiny TCP segments
+    - DNS lookups
+    - HTTP methods
+    - TLS certificates
+    answer: 0
+    why: Nagle's algorithm coalesces small writes under certain conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Use a packet trace to identify FIN, TIME_WAIT-related behaviour and the timing of small writes
+    and ACKs.

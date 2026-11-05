@@ -1,0 +1,430 @@
+part:
+  id: co1-part-02
+  co: CO1
+  title: Encapsulation, Header Overhead, and MTU
+  order: 2
+  concept_ids:
+  - encapsulation-process
+  - decapsulation-process
+  - protocol-header-overhead
+  - maximum-transmission-unit
+concepts:
+- id: encapsulation-process
+  code: CN-CO1.2.1
+  title: Encapsulation
+  session: 2
+  skilling_exp: 1
+  btl: 2
+  difficulty: 1
+  prereqs:
+  - osi-tcpip-models
+  eli5: 'Think of putting a letter into envelopes. Each delivery service adds its own label so the letter can travel
+    through that service. A network does something similar: each layer adds control information before sending data.'
+  key_points:
+  - Application data is passed down the protocol stack.
+  - Each layer may add a header; some layers may add a trailer.
+  - The resulting unit is carried by the next lower layer.
+  - Encapsulation lets layers provide services without needing every layer to understand the whole application.
+  deep_dive: 'Encapsulation is the process of wrapping data with protocol-specific control information as it moves
+    down the network stack. An application creates a message; the transport layer may add ports and transport control
+    fields; the network layer adds logical addressing; and the link layer adds local-delivery information and often
+    a frame check field. The exact names of the data units depend on the protocol and textbook convention. Encapsulation
+    is not simply adding arbitrary bytes: each header has a defined format and meaning understood by the corresponding
+    peer layer. The receiver processes the information in the reverse direction. Header sizes matter because they
+    consume part of the transmitted capacity and can affect fragmentation or segmentation decisions. In the handout,
+    the Encapsulation Builder experiment asks students to analyze protocol-header overhead and determine its effect
+    on network efficiency. A correct analysis therefore separates application payload bytes from protocol overhead
+    and states which layers and headers are included.'
+  formulas:
+  - id: encap_total
+    latex: L_{total}=L_{payload}+\sum_i H_i
+    vars:
+      L_{total: total encapsulated length in bytes
+      L_{payload: application payload length in bytes
+      H_i: header or trailer length added by layer i in bytes
+    example: A 1000-byte payload with 20-byte, 20-byte, and 18-byte additions has total length 1000+20+20+18=1058
+      bytes.
+  viz:
+    type: bit_grid
+    description: Adjust protocol layers included and observe encapsulation as the selected network condition changes.
+    params:
+    - name: layers
+      label: Protocol layers included
+      min: 1
+      max: 5
+      step: 1
+      default: 3
+      unit: count
+    compute:
+      total_bytes: payload_bytes + layers * 20
+    outcomes:
+    - when: layers <= 3
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: layers > 3 && layers <= 4
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: layers > 4
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        layers: 2
+      lesson: A smaller stack adds fewer modeled headers.
+    - set:
+        layers: 4
+      lesson: Compare payload bytes with the accumulated overhead.
+    - set:
+        layers: 5
+      lesson: The model shows how additional headers increase total transmitted size.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of encapsulation?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: 'Use the Encapsulation Builder idea: choose a payload size, assign a header size to each layer, calculate
+    total bytes, and report the payload-efficiency percentage.'
+- id: decapsulation-process
+  code: CN-CO1.2.2
+  title: Decapsulation
+  session: 2
+  skilling_exp: 1
+  btl: 2
+  difficulty: 1
+  prereqs:
+  - encapsulation-process
+  eli5: Opening a parcel means removing the outer delivery labels one by one until you reach the item inside. At
+    the receiving computer, each network layer reads and removes the information meant for it.
+  key_points:
+  - The receiving stack processes headers from the outside inward.
+  - Each layer interprets its own protocol fields.
+  - The remaining data is passed to the next higher layer.
+  - Malformed or unexpected protocol information can prevent correct delivery.
+  deep_dive: 'Decapsulation is the receiver-side counterpart of encapsulation. A frame arrives at the destination
+    interface, where the link layer checks and interprets its framing information. The network layer then examines
+    its header, including fields used for addressing and delivery, and passes the carried payload upward when appropriate.
+    The transport layer interprets its own header and identifies the receiving application endpoint. Finally, application
+    data is delivered to the application protocol. The process is logically layered, although implementations may
+    combine work for efficiency. Decapsulation does not mean that every header is always removed in exactly the
+    same way: tunnels, options, extensions, and nested protocols can introduce additional processing. For CO1, the
+    important point is to understand how the receiver reverses the sender''s wrapping process and how the headers
+    added during encapsulation support communication. When analyzing a capture, identify the layer represented by
+    each visible header rather than treating the packet as one undifferentiated block.'
+  formulas: []
+  viz:
+    type: packet_flow
+    description: Adjust headers to remove and observe decapsulation as the selected network condition changes.
+    params:
+    - name: header_count
+      label: Headers to remove
+      min: 0
+      max: 5
+      step: 1
+      default: 3
+      unit: headers
+    compute:
+      remaining: 5 - header_count
+    outcomes:
+    - when: header_count <= 3
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: header_count > 3 && header_count <= 4
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: header_count > 4
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        header_count: 2
+      lesson: Several outer headers are removed before application data is reached.
+    - set:
+        header_count: 4
+      lesson: More protocol layers require more header processing.
+    - set:
+        header_count: 5
+      lesson: All modeled headers have been removed; inspect whether the count matches the encapsulation path.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of decapsulation?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Draw a sender-to-receiver stack and annotate which header is added at each sender layer and interpreted
+    at each receiver layer.
+- id: protocol-header-overhead
+  code: CN-CO1.2.3
+  title: Protocol Header Overhead and Payload Efficiency
+  session: 2
+  skilling_exp: 1
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - encapsulation-process
+  eli5: 'A delivery truck carries both the product and its packaging. The packaging is useful, but it takes space.
+    Network headers are like that packaging: they help data travel, but they are not the application''s actual content.'
+  key_points:
+  - Overhead is transmitted control information beyond the application payload.
+  - Efficiency compares useful payload bytes with total transmitted bytes.
+  - Small payloads can have a larger overhead fraction than large payloads.
+  - The calculation must state which headers and trailers are counted.
+  deep_dive: 'Protocol overhead is the portion of transmitted data that is not application payload but is required
+    for protocol operation. It can include transport, network, and link headers, as well as trailers such as a frame
+    check sequence. Payload efficiency is the ratio of useful payload bytes to the total bytes transmitted under
+    the chosen accounting boundary. The boundary matters: an Ethernet frame calculation differs from a calculation
+    that also includes preamble, inter-frame gap, or physical-layer coding. For a fixed header size, smaller application
+    messages generally spend a larger fraction of each transmission on overhead. This is why batching or application
+    framing can improve efficiency, although it may add latency or other trade-offs. In the CO1 Encapsulation Builder
+    experiment, students should calculate the overhead introduced by protocol headers and explain how it changes
+    network efficiency. Always keep bytes and percentages distinct, and do not count the same header twice.'
+  formulas:
+  - id: payload_efficiency
+    latex: \eta=\frac{L_{payload}}{L_{total}}\times 100\%
+    vars:
+      \eta: payload efficiency in percent
+      L_{payload: application payload bytes
+      L_{total: total counted transmitted bytes
+    example: For a 1000-byte payload in a 1058-byte packet, efficiency is (1000/1058)×100 ≈ 94.52%.
+  viz:
+    type: bar_compare
+    description: Adjust payload size and observe protocol header overhead and payload efficiency as the selected
+      network condition changes.
+    params:
+    - name: payload
+      label: Payload size
+      min: 1
+      max: 1400
+      step: 1
+      default: 1000
+      unit: bytes
+    compute:
+      efficiency: payload / (payload + 58) * 100
+    outcomes:
+    - when: efficiency >= 90
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: efficiency >= 80 && efficiency < 90
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: efficiency < 80
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        payload: 1000
+      lesson: A large payload amortizes fixed header cost.
+    - set:
+        payload: 300
+      lesson: The overhead share becomes more visible.
+    - set:
+        payload: 50
+      lesson: A small payload can have low payload efficiency.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of protocol header overhead and payload efficiency?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Compare the efficiency of 50-byte, 300-byte, and 1000-byte payloads when the counted headers and trailer
+    total 58 bytes.
+- id: maximum-transmission-unit
+  code: CN-CO1.2.4
+  title: Maximum Transmission Unit (MTU)
+  session: 2
+  skilling_exp: 1
+  btl: 4
+  difficulty: 2
+  prereqs:
+  - protocol-header-overhead
+  eli5: Imagine a lift that can carry only a fixed maximum weight. A network link also has a maximum size for one
+    frame's carried packet. If the packet is too large, it must be handled differently before it can cross that
+    link.
+  key_points:
+  - MTU is the maximum network-layer packet size that a link can carry in its payload field, as defined for that
+    link technology.
+  - Headers at different layers affect the size that fits.
+  - A packet larger than a path link's MTU may require fragmentation or another handling mechanism, depending on
+    the protocol.
+  - Path MTU is constrained by the smallest MTU along the path.
+  deep_dive: The maximum transmission unit (MTU) is the largest network-layer packet that a link can carry in one
+    link-layer payload, according to the link protocol. Ethernet commonly uses a 1500-byte IP MTU, but the handout's
+    key learning objective is the effect of MTU on packet size and transfer behavior, not memorizing one value.
+    The usable application payload is smaller than the MTU after network and transport headers are included. Across
+    a path, the effective path MTU is limited by the smallest MTU on that route. If a packet exceeds a link's supported
+    size, the network must use a protocol-appropriate mechanism such as fragmentation where supported, or the sender
+    must reduce packet size. Tunnels can reduce effective MTU because encapsulation adds another outer header. The
+    handout's scenario in which a transfer stops at 1.2 MB should prompt investigation of packet sizing and path
+    behavior rather than an unsupported assumption that MTU is always the cause.
+  formulas:
+  - id: mtu_payload
+    latex: L_{payload,max}=MTU-H_{network}-H_{transport}
+    vars:
+      L_{payload,max: maximum transport payload in bytes under the stated headers
+      MTU: link MTU in bytes
+      H_{network: network header bytes
+      H_{transport: transport header bytes
+    example: With MTU 1500 bytes, a 20-byte IPv4 header and 20-byte TCP header, maximum TCP payload is 1500-20-20=1460
+      bytes.
+  viz:
+    type: bit_grid
+    description: Adjust packet size and observe maximum transmission unit (mtu) as the selected network condition
+      changes.
+    params:
+    - name: packet_size
+      label: Packet size
+      min: 500
+      max: 2000
+      step: 50
+      default: 1500
+      unit: bytes
+    compute:
+      excess: max(0, packet_size - 1500)
+    outcomes:
+    - when: packet_size <= 1500
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: packet_size > 1500 && packet_size <= 1800
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: packet_size > 1800
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        packet_size: 1200
+      lesson: The modeled packet fits within the 1500-byte MTU.
+    - set:
+        packet_size: 1600
+      lesson: The packet exceeds the MTU and requires protocol-specific handling.
+    - set:
+        packet_size: 1950
+      lesson: A larger excess makes the mismatch more pronounced.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of maximum transmission unit (mtu)?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: For a 1500-byte MTU, calculate the maximum TCP payload for IPv4 with a 20-byte IP header and a 20-byte
+    TCP header; then explain how a tunnel header changes the budget.

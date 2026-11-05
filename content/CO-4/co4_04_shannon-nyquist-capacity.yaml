@@ -1,0 +1,347 @@
+part:
+  id: co4_04
+  co: CO-4
+  title: Shannon Capacity and Nyquist Limits
+  order: 4
+  concept_ids:
+  - co4-shannon-capacity
+  - co4-nyquist-rate
+  - co4-capacity-bottleneck
+concepts:
+- id: co4-shannon-capacity
+  code: CN-CO4.04.1
+  title: Shannon Channel Capacity
+  session: 15
+  skilling_exp: 19
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co4-physical-media-budgets
+  eli5: Shannon's theorem estimates the maximum reliable data rate for a noisy channel using bandwidth and signal-to-noise
+    ratio.
+  key_points:
+  - Shannon capacity depends on bandwidth and signal-to-noise ratio.
+  - SNR in the equation must be a linear power ratio, not a decibel value.
+  - Increasing bandwidth or SNR increases theoretical capacity.
+  - The result is an upper bound, not guaranteed application throughput.
+  - Coding, modulation, overhead and implementation limits reduce real throughput.
+  deep_dive: 'Shannon Channel Capacity is part of Shannon Capacity and Nyquist Limits in CO-4, whose focus is to
+    analyze link- and physical-layer behaviour and diagnose faults that may not produce an explicit error message.
+    The central idea is to connect the protocol mechanism to observable network behaviour rather than memorise a
+    definition. In a practical investigation, first state the expected behaviour, identify the relevant frame, link,
+    signal or airtime measurement, and record a baseline before changing configuration. Then vary one factor at
+    a time and compare the result with the expected model. The formula supplied with this concept is a compact engineering
+    model: identify each variable, keep units consistent, substitute measured or stated values, and explain what
+    the result does and does not prove. The visualization is intended for controlled exploration; it simplifies
+    real device behaviour and is not a complete simulator of vendor-specific implementations. When diagnosing a
+    fault, correlate counters and packet observations at both ends of the link, check configuration symmetry, and
+    distinguish physical impairment from a Layer-2 forwarding or shared-medium problem. Finally, document the evidence,
+    the single change made, the expected impact and the verification result. This method matters because a link
+    can remain administratively up while corruption, contention, poor signal margin, loops or airtime imbalance
+    make service unusable.'
+  formulas:
+  - id: co4-shannon-capacity-formula
+    latex: C = B * log2(1 + S/N)
+    vars: 'C: capacity bit/s; B: bandwidth Hz; S/N: linear signal-to-noise ratio'
+    example: For B=1 MHz and SNR=15 linear, C=1,000,000*log2(16)=4 Mbit/s.
+  viz:
+    type: queue_curve
+    description: Explore the main variables associated with shannon channel capacity and compare the simplified
+      model with a measured network result.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified visualization.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying network condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Start with a baseline where Input A is twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed outcome.
+  common_mistakes:
+  - Substituting SNR in dB directly into the logarithm.
+  - Treating Shannon capacity as measured throughput.
+  - Assuming doubling SNR doubles capacity.
+  quiz:
+  - q: What is the main purpose of Shannon Channel Capacity?
+    options:
+    - To understand or operate shannon channel capacity
+    - To encrypt all application data
+    - To replace IP routing
+    - To guarantee zero packet loss
+    answer: 0
+    why: This concept addresses the specific link-layer or physical-layer mechanism named in the question.
+  - q: Which diagnostic approach is most reliable for a silent network fault?
+    options:
+    - Change several settings at once
+    - Collect measurements, test one hypothesis and verify the result
+    - Assume link-up proves service health
+    - Ignore counters and rely only on user reports
+    answer: 1
+    why: A falsifiable hypothesis and controlled test isolate causes while preserving evidence.
+  - q: Which statement best describes a simplified engineering model?
+    options:
+    - It reproduces every vendor implementation exactly
+    - It removes the need for packet captures
+    - It explains selected relationships but must be checked against measurements
+    - It proves every fault has one cause
+    answer: 2
+    why: Models clarify relationships, but real devices and environments must still be measured.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small test or calculation for shannon channel capacity; record the expected result, observed
+    evidence, one controlled change and a verification result.
+- id: co4-nyquist-rate
+  code: CN-CO4.04.2
+  title: Nyquist Signalling Limit
+  session: 15
+  skilling_exp: 19
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co4-shannon-capacity
+  eli5: Nyquist relates the maximum symbol rate of an ideal noiseless band-limited channel to bandwidth. More signal
+    levels can carry more bits per symbol.
+  key_points:
+  - The basic Nyquist expression gives a theoretical limit for an ideal noiseless channel.
+  - The symbol rate is bounded by twice the bandwidth in the basic expression.
+  - The number of signal levels determines bits represented per symbol.
+  - More levels require the receiver to distinguish more closely spaced states.
+  - Noise and distortion make the ideal limit harder to approach.
+  deep_dive: 'Nyquist Signalling Limit is part of Shannon Capacity and Nyquist Limits in CO-4, whose focus is to
+    analyze link- and physical-layer behaviour and diagnose faults that may not produce an explicit error message.
+    The central idea is to connect the protocol mechanism to observable network behaviour rather than memorise a
+    definition. In a practical investigation, first state the expected behaviour, identify the relevant frame, link,
+    signal or airtime measurement, and record a baseline before changing configuration. Then vary one factor at
+    a time and compare the result with the expected model. The formula supplied with this concept is a compact engineering
+    model: identify each variable, keep units consistent, substitute measured or stated values, and explain what
+    the result does and does not prove. The visualization is intended for controlled exploration; it simplifies
+    real device behaviour and is not a complete simulator of vendor-specific implementations. When diagnosing a
+    fault, correlate counters and packet observations at both ends of the link, check configuration symmetry, and
+    distinguish physical impairment from a Layer-2 forwarding or shared-medium problem. Finally, document the evidence,
+    the single change made, the expected impact and the verification result. This method matters because a link
+    can remain administratively up while corruption, contention, poor signal margin, loops or airtime imbalance
+    make service unusable.'
+  formulas:
+  - id: co4-nyquist-rate-formula
+    latex: R_max = 2B * log2(M)
+    vars: 'R_max: bit/s; B: bandwidth Hz; M: discrete signal levels'
+    example: For B=3 kHz and M=4, Rmax=2*3000*2=12 kbit/s.
+  viz:
+    type: bar_compare
+    description: Explore the main variables associated with nyquist signalling limit and compare the simplified
+      model with a measured network result.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified visualization.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying network condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Start with a baseline where Input A is twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed outcome.
+  common_mistakes:
+  - Confusing baud with bit/s.
+  - Ignoring the noiseless-channel assumption.
+  - Assuming more signal levels have no noise penalty.
+  quiz:
+  - q: What is the main purpose of Nyquist Signalling Limit?
+    options:
+    - To understand or operate nyquist signalling limit
+    - To encrypt all application data
+    - To replace IP routing
+    - To guarantee zero packet loss
+    answer: 0
+    why: This concept addresses the specific link-layer or physical-layer mechanism named in the question.
+  - q: Which diagnostic approach is most reliable for a silent network fault?
+    options:
+    - Change several settings at once
+    - Collect measurements, test one hypothesis and verify the result
+    - Assume link-up proves service health
+    - Ignore counters and rely only on user reports
+    answer: 1
+    why: A falsifiable hypothesis and controlled test isolate causes while preserving evidence.
+  - q: Which statement best describes a simplified engineering model?
+    options:
+    - It reproduces every vendor implementation exactly
+    - It removes the need for packet captures
+    - It explains selected relationships but must be checked against measurements
+    - It proves every fault has one cause
+    answer: 2
+    why: Models clarify relationships, but real devices and environments must still be measured.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small test or calculation for nyquist signalling limit; record the expected result, observed
+    evidence, one controlled change and a verification result.
+- id: co4-capacity-bottleneck
+  code: CN-CO4.04.3
+  title: Using Shannon and Nyquist Together
+  session: 15
+  skilling_exp: 19
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co4-shannon-capacity
+  - co4-nyquist-rate
+  eli5: Shannon and Nyquist describe different constraints. A practical design must respect both the signalling
+    limit and noisy-channel capacity limit.
+  key_points:
+  - Nyquist focuses on bandwidth and signal levels in an ideal noiseless channel.
+  - Shannon focuses on bandwidth and SNR in a noisy channel.
+  - Achievable rate must not exceed either applicable theoretical bound.
+  - State assumptions and distinguish theoretical ceiling from real link rate.
+  - Measured throughput is lower due to coding, framing, retransmissions and shared-medium access.
+  deep_dive: 'Using Shannon and Nyquist Together is part of Shannon Capacity and Nyquist Limits in CO-4, whose focus
+    is to analyze link- and physical-layer behaviour and diagnose faults that may not produce an explicit error
+    message. The central idea is to connect the protocol mechanism to observable network behaviour rather than memorise
+    a definition. In a practical investigation, first state the expected behaviour, identify the relevant frame,
+    link, signal or airtime measurement, and record a baseline before changing configuration. Then vary one factor
+    at a time and compare the result with the expected model. The formula supplied with this concept is a compact
+    engineering model: identify each variable, keep units consistent, substitute measured or stated values, and
+    explain what the result does and does not prove. The visualization is intended for controlled exploration; it
+    simplifies real device behaviour and is not a complete simulator of vendor-specific implementations. When diagnosing
+    a fault, correlate counters and packet observations at both ends of the link, check configuration symmetry,
+    and distinguish physical impairment from a Layer-2 forwarding or shared-medium problem. Finally, document the
+    evidence, the single change made, the expected impact and the verification result. This method matters because
+    a link can remain administratively up while corruption, contention, poor signal margin, loops or airtime imbalance
+    make service unusable.'
+  formulas:
+  - id: co4-capacity-bottleneck-formula
+    latex: R <= min(R_Nyquist, C_Shannon)
+    vars: 'R: achievable rate; R_Nyquist: Nyquist limit; C_Shannon: Shannon capacity'
+    example: If Nyquist limit is 12 kbit/s and Shannon capacity is 9 kbit/s, the combined ceiling is 9 kbit/s.
+  viz:
+    type: bar_compare
+    description: Explore the main variables associated with using shannon and nyquist together and compare the simplified
+      model with a measured network result.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified visualization.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying network condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Start with a baseline where Input A is twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed outcome.
+  common_mistakes:
+  - Adding the two limits instead of taking the smaller bound.
+  - Comparing values with inconsistent units.
+  - Presenting theoretical bounds as actual application throughput.
+  quiz:
+  - q: What is the main purpose of Using Shannon and Nyquist Together?
+    options:
+    - To understand or operate using shannon and nyquist together
+    - To encrypt all application data
+    - To replace IP routing
+    - To guarantee zero packet loss
+    answer: 0
+    why: This concept addresses the specific link-layer or physical-layer mechanism named in the question.
+  - q: Which diagnostic approach is most reliable for a silent network fault?
+    options:
+    - Change several settings at once
+    - Collect measurements, test one hypothesis and verify the result
+    - Assume link-up proves service health
+    - Ignore counters and rely only on user reports
+    answer: 1
+    why: A falsifiable hypothesis and controlled test isolate causes while preserving evidence.
+  - q: Which statement best describes a simplified engineering model?
+    options:
+    - It reproduces every vendor implementation exactly
+    - It removes the need for packet captures
+    - It explains selected relationships but must be checked against measurements
+    - It proves every fault has one cause
+    answer: 2
+    why: Models clarify relationships, but real devices and environments must still be measured.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small test or calculation for using shannon and nyquist together; record the expected result,
+    observed evidence, one controlled change and a verification result.

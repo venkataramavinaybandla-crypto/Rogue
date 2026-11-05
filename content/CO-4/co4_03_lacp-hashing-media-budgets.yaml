@@ -1,0 +1,347 @@
+part:
+  id: co4_03
+  co: CO-4
+  title: Link Aggregation, LACP and Physical Media
+  order: 3
+  concept_ids:
+  - co4-lacp-link-aggregation
+  - co4-lacp-hashing
+  - co4-physical-media-budgets
+concepts:
+- id: co4-lacp-link-aggregation
+  code: CN-CO4.03.1
+  title: Link Aggregation and LACP
+  session: 14
+  skilling_exp: 18
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co4-spanning-tree
+  eli5: Link aggregation bundles physical links into one logical connection. LACP helps connected devices negotiate
+    which links belong in the bundle.
+  key_points:
+  - Link aggregation combines compatible physical links into a logical bundle.
+  - LACP exchanges control information to negotiate and maintain the aggregation.
+  - Member links need compatible settings such as speed and duplex.
+  - A bundle provides aggregate capacity across suitably distributed flows and resilience to member failure.
+  - A single flow is commonly pinned to one member by a hash.
+  deep_dive: 'Link Aggregation and LACP is part of Link Aggregation, LACP and Physical Media in CO-4, whose focus
+    is to analyze link- and physical-layer behaviour and diagnose faults that may not produce an explicit error
+    message. The central idea is to connect the protocol mechanism to observable network behaviour rather than memorise
+    a definition. In a practical investigation, first state the expected behaviour, identify the relevant frame,
+    link, signal or airtime measurement, and record a baseline before changing configuration. Then vary one factor
+    at a time and compare the result with the expected model. The formula supplied with this concept is a compact
+    engineering model: identify each variable, keep units consistent, substitute measured or stated values, and
+    explain what the result does and does not prove. The visualization is intended for controlled exploration; it
+    simplifies real device behaviour and is not a complete simulator of vendor-specific implementations. When diagnosing
+    a fault, correlate counters and packet observations at both ends of the link, check configuration symmetry,
+    and distinguish physical impairment from a Layer-2 forwarding or shared-medium problem. Finally, document the
+    evidence, the single change made, the expected impact and the verification result. This method matters because
+    a link can remain administratively up while corruption, contention, poor signal margin, loops or airtime imbalance
+    make service unusable.'
+  formulas:
+  - id: co4-lacp-link-aggregation-formula
+    latex: C_aggregate = n * C_member
+    vars: 'C_aggregate: theoretical aggregate capacity; n: active members; C_member: one member capacity'
+    example: Four active 1 Gbit/s members provide 4 Gbit/s theoretical aggregate capacity across distributed flows,
+      not necessarily one flow.
+  viz:
+    type: bar_compare
+    description: Explore the main variables associated with link aggregation and lacp and compare the simplified
+      model with a measured network result.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified visualization.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying network condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Start with a baseline where Input A is twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed outcome.
+  common_mistakes:
+  - Assuming one TCP flow always receives the sum of member rates.
+  - Treating LACP itself as the load-balancing algorithm.
+  - Ignoring mismatched member configuration.
+  quiz:
+  - q: What is the main purpose of Link Aggregation and LACP?
+    options:
+    - To understand or operate link aggregation and lacp
+    - To encrypt all application data
+    - To replace IP routing
+    - To guarantee zero packet loss
+    answer: 0
+    why: This concept addresses the specific link-layer or physical-layer mechanism named in the question.
+  - q: Which diagnostic approach is most reliable for a silent network fault?
+    options:
+    - Change several settings at once
+    - Collect measurements, test one hypothesis and verify the result
+    - Assume link-up proves service health
+    - Ignore counters and rely only on user reports
+    answer: 1
+    why: A falsifiable hypothesis and controlled test isolate causes while preserving evidence.
+  - q: Which statement best describes a simplified engineering model?
+    options:
+    - It reproduces every vendor implementation exactly
+    - It removes the need for packet captures
+    - It explains selected relationships but must be checked against measurements
+    - It proves every fault has one cause
+    answer: 2
+    why: Models clarify relationships, but real devices and environments must still be measured.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small test or calculation for link aggregation and lacp; record the expected result, observed
+    evidence, one controlled change and a verification result.
+- id: co4-lacp-hashing
+  code: CN-CO4.03.2
+  title: Aggregation Hashing and Imbalance
+  session: 14
+  skilling_exp: 18
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co4-lacp-link-aggregation
+  eli5: A switch uses selected packet fields to choose a member link. Similar hash inputs can send many flows to
+    one member while others sit idle.
+  key_points:
+  - Hashing may use source/destination MAC, IP addresses and transport ports.
+  - A flow is typically kept on one member to avoid per-packet reordering.
+  - The number and diversity of flows affect distribution.
+  - Uneven utilization does not necessarily indicate a failed member.
+  - Inspect hash policy, flow distribution and per-member counters.
+  deep_dive: 'Aggregation Hashing and Imbalance is part of Link Aggregation, LACP and Physical Media in CO-4, whose
+    focus is to analyze link- and physical-layer behaviour and diagnose faults that may not produce an explicit
+    error message. The central idea is to connect the protocol mechanism to observable network behaviour rather
+    than memorise a definition. In a practical investigation, first state the expected behaviour, identify the relevant
+    frame, link, signal or airtime measurement, and record a baseline before changing configuration. Then vary one
+    factor at a time and compare the result with the expected model. The formula supplied with this concept is a
+    compact engineering model: identify each variable, keep units consistent, substitute measured or stated values,
+    and explain what the result does and does not prove. The visualization is intended for controlled exploration;
+    it simplifies real device behaviour and is not a complete simulator of vendor-specific implementations. When
+    diagnosing a fault, correlate counters and packet observations at both ends of the link, check configuration
+    symmetry, and distinguish physical impairment from a Layer-2 forwarding or shared-medium problem. Finally, document
+    the evidence, the single change made, the expected impact and the verification result. This method matters because
+    a link can remain administratively up while corruption, contention, poor signal margin, loops or airtime imbalance
+    make service unusable.'
+  formulas:
+  - id: co4-lacp-hashing-formula
+    latex: U_i = (T_i / C_i) * 100%
+    vars: 'U_i: member utilization; T_i: traffic on member; C_i: member capacity'
+    example: A 1 Gbit/s member carrying 500 Mbit/s has 50% utilization.
+  viz:
+    type: bar_compare
+    description: Explore the main variables associated with aggregation hashing and imbalance and compare the simplified
+      model with a measured network result.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified visualization.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying network condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Start with a baseline where Input A is twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed outcome.
+  common_mistakes:
+  - Assuming hashing guarantees perfectly equal distribution.
+  - Changing hash inputs without considering reordering.
+  - Looking only at aggregate counters rather than member counters.
+  quiz:
+  - q: What is the main purpose of Aggregation Hashing and Imbalance?
+    options:
+    - To understand or operate aggregation hashing and imbalance
+    - To encrypt all application data
+    - To replace IP routing
+    - To guarantee zero packet loss
+    answer: 0
+    why: This concept addresses the specific link-layer or physical-layer mechanism named in the question.
+  - q: Which diagnostic approach is most reliable for a silent network fault?
+    options:
+    - Change several settings at once
+    - Collect measurements, test one hypothesis and verify the result
+    - Assume link-up proves service health
+    - Ignore counters and rely only on user reports
+    answer: 1
+    why: A falsifiable hypothesis and controlled test isolate causes while preserving evidence.
+  - q: Which statement best describes a simplified engineering model?
+    options:
+    - It reproduces every vendor implementation exactly
+    - It removes the need for packet captures
+    - It explains selected relationships but must be checked against measurements
+    - It proves every fault has one cause
+    answer: 2
+    why: Models clarify relationships, but real devices and environments must still be measured.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small test or calculation for aggregation hashing and imbalance; record the expected result,
+    observed evidence, one controlled change and a verification result.
+- id: co4-physical-media-budgets
+  code: CN-CO4.03.3
+  title: Physical Media and Link Budgets
+  session: 15
+  skilling_exp: 18
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co4-lacp-link-aggregation
+  eli5: A physical link has limits such as distance, attenuation, interference and hardware capability. A media
+    budget checks whether enough signal margin remains.
+  key_points:
+  - Copper, fibre and wireless media have different reach and impairment characteristics.
+  - A link budget accounts for transmit power, path loss and other losses.
+  - Positive margin means received power is above the stated receiver threshold.
+  - Installed media must match transceiver type, wavelength and supported distance.
+  - Silent faults can arise from marginal signal, dirty connectors or incompatible optics.
+  deep_dive: 'Physical Media and Link Budgets is part of Link Aggregation, LACP and Physical Media in CO-4, whose
+    focus is to analyze link- and physical-layer behaviour and diagnose faults that may not produce an explicit
+    error message. The central idea is to connect the protocol mechanism to observable network behaviour rather
+    than memorise a definition. In a practical investigation, first state the expected behaviour, identify the relevant
+    frame, link, signal or airtime measurement, and record a baseline before changing configuration. Then vary one
+    factor at a time and compare the result with the expected model. The formula supplied with this concept is a
+    compact engineering model: identify each variable, keep units consistent, substitute measured or stated values,
+    and explain what the result does and does not prove. The visualization is intended for controlled exploration;
+    it simplifies real device behaviour and is not a complete simulator of vendor-specific implementations. When
+    diagnosing a fault, correlate counters and packet observations at both ends of the link, check configuration
+    symmetry, and distinguish physical impairment from a Layer-2 forwarding or shared-medium problem. Finally, document
+    the evidence, the single change made, the expected impact and the verification result. This method matters because
+    a link can remain administratively up while corruption, contention, poor signal margin, loops or airtime imbalance
+    make service unusable.'
+  formulas:
+  - id: co4-physical-media-budgets-formula
+    latex: P_rx = P_tx - L_path - L_other
+    vars: 'P_rx: received dBm; P_tx: transmit dBm; L_path: path loss dB; L_other: other losses dB'
+    example: With 0 dBm transmit power, 3 dB path loss and 2 dB other loss, received power is -5 dBm.
+  viz:
+    type: bar_compare
+    description: Explore the main variables associated with physical media and link budgets and compare the simplified
+      model with a measured network result.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified visualization.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying network condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Start with a baseline where Input A is twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed outcome.
+  common_mistakes:
+  - Adding dBm values as if they were linear power values.
+  - Ignoring connector, splice or environmental losses.
+  - Assuming link-up proves adequate performance margin.
+  quiz:
+  - q: What is the main purpose of Physical Media and Link Budgets?
+    options:
+    - To understand or operate physical media and link budgets
+    - To encrypt all application data
+    - To replace IP routing
+    - To guarantee zero packet loss
+    answer: 0
+    why: This concept addresses the specific link-layer or physical-layer mechanism named in the question.
+  - q: Which diagnostic approach is most reliable for a silent network fault?
+    options:
+    - Change several settings at once
+    - Collect measurements, test one hypothesis and verify the result
+    - Assume link-up proves service health
+    - Ignore counters and rely only on user reports
+    answer: 1
+    why: A falsifiable hypothesis and controlled test isolate causes while preserving evidence.
+  - q: Which statement best describes a simplified engineering model?
+    options:
+    - It reproduces every vendor implementation exactly
+    - It removes the need for packet captures
+    - It explains selected relationships but must be checked against measurements
+    - It proves every fault has one cause
+    answer: 2
+    why: Models clarify relationships, but real devices and environments must still be measured.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small test or calculation for physical media and link budgets; record the expected result,
+    observed evidence, one controlled change and a verification result.

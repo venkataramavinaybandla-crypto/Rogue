@@ -1,0 +1,348 @@
+part:
+  id: co5_06
+  co: CO-5
+  title: Infrastructure as Code and Automation
+  order: 6
+  concept_ids:
+  - co5-iac-idempotency
+  - co5-ansible-python-automation
+  - co5-rollback-documentation-ai-ops
+concepts:
+- id: co5-iac-idempotency
+  code: CN-CO5.06.1
+  title: Infrastructure as Code and Idempotency
+  session: 20
+  skilling_exp: 22
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co5-troubleshooting-problem-statement
+  eli5: Infrastructure as Code describes network or system configuration in files so it can be reviewed, repeated
+    and versioned. An idempotent operation can be applied repeatedly without causing additional unintended changes.
+  key_points:
+  - Configuration is represented declaratively or through repeatable automation.
+  - Version control provides change history and review.
+  - Idempotency means repeated application converges on the same intended state.
+  - Automation should report changes and failures clearly.
+  - Secrets and credentials must be handled outside ordinary plaintext configuration where possible.
+  deep_dive: 'Infrastructure as Code and Idempotency belongs to Infrastructure as Code and Automation in CO-5, which
+    focuses on evaluating and operating the network that has already been built. The aim is to turn an operational
+    symptom into a defensible conclusion supported by repeatable evidence. Start by defining the service behaviour
+    that is failing, the affected scope and the time interval. State a hypothesis that predicts an observable result,
+    then select a test that can distinguish it from competing explanations. Collect evidence from relevant endpoints
+    and intermediate systems, including counters, logs, traces, packet observations and configuration state. The
+    formula included with this concept is a compact model: identify every variable, preserve units, state assumptions
+    and explain the limits of the result. The visualization is a learning aid rather than a complete implementation
+    of a vendor device or production control plane. For a real change, estimate the blast radius, make one controlled
+    adjustment, retain a rollback path and repeat the original test. Verification should demonstrate service restoration
+    and check for regressions, not merely confirm that a command returned successfully. Document the hypothesis,
+    test, evidence, change and outcome so another engineer can reproduce the reasoning. This disciplined process
+    reduces guesswork and makes network operations safer, faster and easier to audit.'
+  formulas:
+  - id: co5-iac-idempotency-formula
+    latex: f(f(state)) = f(state)
+    vars: 'f: configuration operation; state: current managed configuration'
+    example: Applying an idempotent configuration twice should leave the system in the same desired state as applying
+      it once.
+  viz:
+    type: state_machine
+    description: Explore the operational relationship behind infrastructure as code and idempotency using controlled
+      input values; compare the simplified result with measured system behaviour.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified learning model.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying operational condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Establish a baseline with Input A twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed result.
+  common_mistakes:
+  - Writing scripts that append duplicate configuration on every run.
+  - Treating a successful command exit as proof of desired state.
+  - Storing credentials directly in source-controlled files.
+  quiz:
+  - q: What is the central purpose of Infrastructure as Code and Idempotency?
+    options:
+    - Apply or analyze infrastructure as code and idempotency in network operations
+    - Encrypt all application traffic
+    - Replace routing protocols
+    - Guarantee that no network fault can occur
+    answer: 0
+    why: The concept supports the specific operational capability named in the question.
+  - q: Which practice best supports reliable fault resolution?
+    options:
+    - Make several changes before measuring
+    - Use a falsifiable hypothesis, controlled test and recorded evidence
+    - Assume a green dashboard proves every user path works
+    - Skip verification after a configuration change
+    answer: 1
+    why: A testable hypothesis and evidence-based workflow distinguish causes and validate the fix.
+  - q: What should happen after a risky network change?
+    options:
+    - Delete the previous configuration immediately
+    - Assume success if the command completed
+    - Verify service behaviour and retain a rollback path
+    - Avoid documenting the change
+    answer: 2
+    why: Operational success requires service-level verification and a safe recovery option.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Create a small practical exercise for infrastructure as code and idempotency. State the expected behaviour,
+    collect evidence, make one controlled change if needed, and record verification and rollback considerations.
+- id: co5-ansible-python-automation
+  code: CN-CO5.06.2
+  title: Ansible and Python Network Automation
+  session: 20
+  skilling_exp: 22
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co5-iac-idempotency
+  eli5: Ansible and Python can automate repeatable network tasks. Good automation checks the current state, applies
+    only necessary changes and reports what happened.
+  key_points:
+  - Ansible playbooks describe repeatable configuration tasks and can use modules for network devices.
+  - Python can collect data, validate configuration and orchestrate API or CLI workflows.
+  - Inventory separates target devices and groups from task logic.
+  - Automation should include input validation, timeouts, error handling and logging.
+  - Test changes in a safe environment before broad deployment.
+  deep_dive: 'Ansible and Python Network Automation belongs to Infrastructure as Code and Automation in CO-5, which
+    focuses on evaluating and operating the network that has already been built. The aim is to turn an operational
+    symptom into a defensible conclusion supported by repeatable evidence. Start by defining the service behaviour
+    that is failing, the affected scope and the time interval. State a hypothesis that predicts an observable result,
+    then select a test that can distinguish it from competing explanations. Collect evidence from relevant endpoints
+    and intermediate systems, including counters, logs, traces, packet observations and configuration state. The
+    formula included with this concept is a compact model: identify every variable, preserve units, state assumptions
+    and explain the limits of the result. The visualization is a learning aid rather than a complete implementation
+    of a vendor device or production control plane. For a real change, estimate the blast radius, make one controlled
+    adjustment, retain a rollback path and repeat the original test. Verification should demonstrate service restoration
+    and check for regressions, not merely confirm that a command returned successfully. Document the hypothesis,
+    test, evidence, change and outcome so another engineer can reproduce the reasoning. This disciplined process
+    reduces guesswork and makes network operations safer, faster and easier to audit.'
+  formulas:
+  - id: co5-ansible-python-automation-formula
+    latex: Success_rate = successful_tasks / total_tasks
+    vars: 'successful_tasks: tasks completed as expected; total_tasks: attempted tasks'
+    example: If 18 of 20 tasks complete as expected, the run success rate is 90%; the two failures still require
+      investigation.
+  viz:
+    type: timeline
+    description: Explore the operational relationship behind ansible and python network automation using controlled
+      input values; compare the simplified result with measured system behaviour.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified learning model.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying operational condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Establish a baseline with Input A twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed result.
+  common_mistakes:
+  - Running automation against an unverified inventory.
+  - Ignoring partial failure in multi-device runs.
+  - Using brittle text parsing when structured output is available.
+  quiz:
+  - q: What is the central purpose of Ansible and Python Network Automation?
+    options:
+    - Apply or analyze ansible and python network automation in network operations
+    - Encrypt all application traffic
+    - Replace routing protocols
+    - Guarantee that no network fault can occur
+    answer: 0
+    why: The concept supports the specific operational capability named in the question.
+  - q: Which practice best supports reliable fault resolution?
+    options:
+    - Make several changes before measuring
+    - Use a falsifiable hypothesis, controlled test and recorded evidence
+    - Assume a green dashboard proves every user path works
+    - Skip verification after a configuration change
+    answer: 1
+    why: A testable hypothesis and evidence-based workflow distinguish causes and validate the fix.
+  - q: What should happen after a risky network change?
+    options:
+    - Delete the previous configuration immediately
+    - Assume success if the command completed
+    - Verify service behaviour and retain a rollback path
+    - Avoid documenting the change
+    answer: 2
+    why: Operational success requires service-level verification and a safe recovery option.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Create a small practical exercise for ansible and python network automation. State the expected behaviour,
+    collect evidence, make one controlled change if needed, and record verification and rollback considerations.
+- id: co5-rollback-documentation-ai-ops
+  code: CN-CO5.06.3
+  title: Rollback, Verification, Documentation and AI in Operations
+  session: 20
+  skilling_exp: 22
+  btl: 5
+  difficulty: 3
+  prereqs:
+  - co5-ansible-python-automation
+  eli5: Operational automation needs a safe exit plan. Documentation records what changed, while verification checks
+    the real service. AI can assist analysis but its suggestions still need evidence and human review.
+  key_points:
+  - Every risky automated change should have a rollback or recovery strategy.
+  - Verification should test service behaviour, not only configuration state.
+  - Network documentation should capture topology, addressing, dependencies and ownership.
+  - AI-generated diagnoses or commands must be checked against evidence and change controls.
+  - A complete change record includes intent, scope, expected impact, execution, rollback and validation.
+  deep_dive: 'Rollback, Verification, Documentation and AI in Operations belongs to Infrastructure as Code and Automation
+    in CO-5, which focuses on evaluating and operating the network that has already been built. The aim is to turn
+    an operational symptom into a defensible conclusion supported by repeatable evidence. Start by defining the
+    service behaviour that is failing, the affected scope and the time interval. State a hypothesis that predicts
+    an observable result, then select a test that can distinguish it from competing explanations. Collect evidence
+    from relevant endpoints and intermediate systems, including counters, logs, traces, packet observations and
+    configuration state. The formula included with this concept is a compact model: identify every variable, preserve
+    units, state assumptions and explain the limits of the result. The visualization is a learning aid rather than
+    a complete implementation of a vendor device or production control plane. For a real change, estimate the blast
+    radius, make one controlled adjustment, retain a rollback path and repeat the original test. Verification should
+    demonstrate service restoration and check for regressions, not merely confirm that a command returned successfully.
+    Document the hypothesis, test, evidence, change and outcome so another engineer can reproduce the reasoning.
+    This disciplined process reduces guesswork and makes network operations safer, faster and easier to audit.'
+  formulas:
+  - id: co5-rollback-documentation-ai-ops-formula
+    latex: Change_record = intent + scope + evidence + rollback + verification
+    vars: 'intent: purpose; scope: affected systems; evidence: supporting observations; rollback: recovery plan;
+      verification: post-change checks'
+    example: A change record for an ACL update should identify the intended traffic, affected interfaces, prior
+      rule set, rollback command and test results.
+  viz:
+    type: timeline
+    description: Explore the operational relationship behind rollback, verification, documentation and ai in operations
+      using controlled input values; compare the simplified result with measured system behaviour.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified learning model.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying operational condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Establish a baseline with Input A twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed result.
+  common_mistakes:
+  - Treating AI output as authoritative without testing.
+  - Documenting only the final configuration and not the reason for change.
+  - Closing a change without checking service restoration.
+  quiz:
+  - q: What is the central purpose of Rollback, Verification, Documentation and AI in Operations?
+    options:
+    - Apply or analyze rollback, verification, documentation and ai in operations in network operations
+    - Encrypt all application traffic
+    - Replace routing protocols
+    - Guarantee that no network fault can occur
+    answer: 0
+    why: The concept supports the specific operational capability named in the question.
+  - q: Which practice best supports reliable fault resolution?
+    options:
+    - Make several changes before measuring
+    - Use a falsifiable hypothesis, controlled test and recorded evidence
+    - Assume a green dashboard proves every user path works
+    - Skip verification after a configuration change
+    answer: 1
+    why: A testable hypothesis and evidence-based workflow distinguish causes and validate the fix.
+  - q: What should happen after a risky network change?
+    options:
+    - Delete the previous configuration immediately
+    - Assume success if the command completed
+    - Verify service behaviour and retain a rollback path
+    - Avoid documenting the change
+    answer: 2
+    why: Operational success requires service-level verification and a safe recovery option.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Create a small practical exercise for rollback, verification, documentation and ai in operations. State
+    the expected behaviour, collect evidence, make one controlled change if needed, and record verification and
+    rollback considerations.

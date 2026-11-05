@@ -1,0 +1,347 @@
+part:
+  id: co4_02
+  co: CO-4
+  title: VLANs, Trunks and Layer-2 Loop Prevention
+  order: 2
+  concept_ids:
+  - co4-vlan-access-trunk
+  - co4-layer2-loops-broadcast-storms
+  - co4-spanning-tree
+concepts:
+- id: co4-vlan-access-trunk
+  code: CN-CO4.02.1
+  title: VLANs, Access Ports and Trunks
+  session: 14
+  skilling_exp: 18
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co4-mac-learning
+  eli5: A VLAN divides one physical switched network into separate logical broadcast domains. An access port usually
+    serves one VLAN; a trunk carries several VLANs.
+  key_points:
+  - A VLAN creates a separate Layer-2 broadcast domain.
+  - An access port assigns endpoint traffic to an access VLAN.
+  - A trunk carries multiple VLANs and uses tagging to identify them.
+  - Native or untagged VLAN behaviour must match across trunk ends.
+  - Incorrect VLAN membership or trunk allowance can create silent reachability failures.
+  deep_dive: 'VLANs, Access Ports and Trunks is part of VLANs, Trunks and Layer-2 Loop Prevention in CO-4, whose
+    focus is to analyze link- and physical-layer behaviour and diagnose faults that may not produce an explicit
+    error message. The central idea is to connect the protocol mechanism to observable network behaviour rather
+    than memorise a definition. In a practical investigation, first state the expected behaviour, identify the relevant
+    frame, link, signal or airtime measurement, and record a baseline before changing configuration. Then vary one
+    factor at a time and compare the result with the expected model. The formula supplied with this concept is a
+    compact engineering model: identify each variable, keep units consistent, substitute measured or stated values,
+    and explain what the result does and does not prove. The visualization is intended for controlled exploration;
+    it simplifies real device behaviour and is not a complete simulator of vendor-specific implementations. When
+    diagnosing a fault, correlate counters and packet observations at both ends of the link, check configuration
+    symmetry, and distinguish physical impairment from a Layer-2 forwarding or shared-medium problem. Finally, document
+    the evidence, the single change made, the expected impact and the verification result. This method matters because
+    a link can remain administratively up while corruption, contention, poor signal margin, loops or airtime imbalance
+    make service unusable.'
+  formulas:
+  - id: co4-vlan-access-trunk-formula
+    latex: N_broadcast_domains = N_VLANs
+    vars: 'N_broadcast_domains: broadcast domains; N_VLANs: represented VLANs'
+    example: If a switched campus has VLANs 10, 20 and 30, it has three separate Layer-2 broadcast domains.
+  viz:
+    type: topology_graph
+    description: Explore the main variables associated with vlans, access ports and trunks and compare the simplified
+      model with a measured network result.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified visualization.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying network condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Start with a baseline where Input A is twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed outcome.
+  common_mistakes:
+  - Treating a VLAN as a physical switch or router.
+  - Assuming every VLAN automatically passes over every trunk.
+  - Ignoring native VLAN and allowed-VLAN mismatches.
+  quiz:
+  - q: What is the main purpose of VLANs, Access Ports and Trunks?
+    options:
+    - To understand or operate vlans, access ports and trunks
+    - To encrypt all application data
+    - To replace IP routing
+    - To guarantee zero packet loss
+    answer: 0
+    why: This concept addresses the specific link-layer or physical-layer mechanism named in the question.
+  - q: Which diagnostic approach is most reliable for a silent network fault?
+    options:
+    - Change several settings at once
+    - Collect measurements, test one hypothesis and verify the result
+    - Assume link-up proves service health
+    - Ignore counters and rely only on user reports
+    answer: 1
+    why: A falsifiable hypothesis and controlled test isolate causes while preserving evidence.
+  - q: Which statement best describes a simplified engineering model?
+    options:
+    - It reproduces every vendor implementation exactly
+    - It removes the need for packet captures
+    - It explains selected relationships but must be checked against measurements
+    - It proves every fault has one cause
+    answer: 2
+    why: Models clarify relationships, but real devices and environments must still be measured.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small test or calculation for vlans, access ports and trunks; record the expected result, observed
+    evidence, one controlled change and a verification result.
+- id: co4-layer2-loops-broadcast-storms
+  code: CN-CO4.02.2
+  title: Layer-2 Loops and Broadcast Storms
+  session: 14
+  skilling_exp: 17
+  btl: 4
+  difficulty: 2
+  prereqs:
+  - co4-vlan-access-trunk
+  eli5: A Layer-2 loop lets a frame circulate repeatedly because Ethernet frames do not have a network-layer hop
+    limit. Broadcast traffic can multiply until the network is overwhelmed.
+  key_points:
+  - Redundant Layer-2 paths can create forwarding loops without loop prevention.
+  - Ethernet broadcasts may be replicated around a loop and return repeatedly.
+  - MAC-table instability can occur when a source appears on different ports.
+  - Broadcast storms consume link and switch resources.
+  - Spanning tree prevents loops by placing selected redundant paths into a non-forwarding state.
+  deep_dive: 'Layer-2 Loops and Broadcast Storms is part of VLANs, Trunks and Layer-2 Loop Prevention in CO-4, whose
+    focus is to analyze link- and physical-layer behaviour and diagnose faults that may not produce an explicit
+    error message. The central idea is to connect the protocol mechanism to observable network behaviour rather
+    than memorise a definition. In a practical investigation, first state the expected behaviour, identify the relevant
+    frame, link, signal or airtime measurement, and record a baseline before changing configuration. Then vary one
+    factor at a time and compare the result with the expected model. The formula supplied with this concept is a
+    compact engineering model: identify each variable, keep units consistent, substitute measured or stated values,
+    and explain what the result does and does not prove. The visualization is intended for controlled exploration;
+    it simplifies real device behaviour and is not a complete simulator of vendor-specific implementations. When
+    diagnosing a fault, correlate counters and packet observations at both ends of the link, check configuration
+    symmetry, and distinguish physical impairment from a Layer-2 forwarding or shared-medium problem. Finally, document
+    the evidence, the single change made, the expected impact and the verification result. This method matters because
+    a link can remain administratively up while corruption, contention, poor signal margin, loops or airtime imbalance
+    make service unusable.'
+  formulas:
+  - id: co4-layer2-loops-broadcast-storms-formula
+    latex: F_next = F_current * b
+    vars: 'F_current: frames entering a stage; b: replication factor; F_next: frames after replication'
+    example: If each frame is replicated to two paths over four illustrative stages, one frame can grow to 16 copies;
+      this is not a precise switch prediction.
+  viz:
+    type: topology_graph
+    description: Explore the main variables associated with layer-2 loops and broadcast storms and compare the simplified
+      model with a measured network result.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified visualization.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying network condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Start with a baseline where Input A is twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed outcome.
+  common_mistakes:
+  - Expecting Ethernet to discard looping frames using IP TTL.
+  - Assuming broadcast storms only affect the VLAN where they began.
+  - Confusing redundancy with a safe loop-free topology.
+  quiz:
+  - q: What is the main purpose of Layer-2 Loops and Broadcast Storms?
+    options:
+    - To understand or operate layer-2 loops and broadcast storms
+    - To encrypt all application data
+    - To replace IP routing
+    - To guarantee zero packet loss
+    answer: 0
+    why: This concept addresses the specific link-layer or physical-layer mechanism named in the question.
+  - q: Which diagnostic approach is most reliable for a silent network fault?
+    options:
+    - Change several settings at once
+    - Collect measurements, test one hypothesis and verify the result
+    - Assume link-up proves service health
+    - Ignore counters and rely only on user reports
+    answer: 1
+    why: A falsifiable hypothesis and controlled test isolate causes while preserving evidence.
+  - q: Which statement best describes a simplified engineering model?
+    options:
+    - It reproduces every vendor implementation exactly
+    - It removes the need for packet captures
+    - It explains selected relationships but must be checked against measurements
+    - It proves every fault has one cause
+    answer: 2
+    why: Models clarify relationships, but real devices and environments must still be measured.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small test or calculation for layer-2 loops and broadcast storms; record the expected result,
+    observed evidence, one controlled change and a verification result.
+- id: co4-spanning-tree
+  code: CN-CO4.02.3
+  title: Spanning Tree and Loop-Free Topology
+  session: 14
+  skilling_exp: 18
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co4-layer2-loops-broadcast-storms
+  eli5: Spanning tree keeps redundant switch links available as backups while selecting a loop-free set of links
+    to forward traffic.
+  key_points:
+  - Switches exchange BPDUs to build a spanning-tree view.
+  - A root bridge is selected using bridge priority and MAC address information.
+  - Path costs help determine the preferred route toward the root.
+  - Some redundant ports enter non-forwarding roles to prevent loops.
+  - Topology changes and convergence affect recovery after link failure.
+  deep_dive: 'Spanning Tree and Loop-Free Topology is part of VLANs, Trunks and Layer-2 Loop Prevention in CO-4,
+    whose focus is to analyze link- and physical-layer behaviour and diagnose faults that may not produce an explicit
+    error message. The central idea is to connect the protocol mechanism to observable network behaviour rather
+    than memorise a definition. In a practical investigation, first state the expected behaviour, identify the relevant
+    frame, link, signal or airtime measurement, and record a baseline before changing configuration. Then vary one
+    factor at a time and compare the result with the expected model. The formula supplied with this concept is a
+    compact engineering model: identify each variable, keep units consistent, substitute measured or stated values,
+    and explain what the result does and does not prove. The visualization is intended for controlled exploration;
+    it simplifies real device behaviour and is not a complete simulator of vendor-specific implementations. When
+    diagnosing a fault, correlate counters and packet observations at both ends of the link, check configuration
+    symmetry, and distinguish physical impairment from a Layer-2 forwarding or shared-medium problem. Finally, document
+    the evidence, the single change made, the expected impact and the verification result. This method matters because
+    a link can remain administratively up while corruption, contention, poor signal margin, loops or airtime imbalance
+    make service unusable.'
+  formulas:
+  - id: co4-spanning-tree-formula
+    latex: C_path = sum(C_i)
+    vars: 'C_path: total root path cost; C_i: cost of each traversed link'
+    example: A path with illustrative link costs 4, 4 and 19 has total cost 27.
+  viz:
+    type: topology_graph
+    description: Explore the main variables associated with spanning tree and loop-free topology and compare the
+      simplified model with a measured network result.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified visualization.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying network condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Start with a baseline where Input A is twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed outcome.
+  common_mistakes:
+  - Assuming spanning tree disables every redundant link permanently.
+  - Ignoring root-bridge placement and path costs.
+  - Treating a cost comparison as a full STP state-machine simulation.
+  quiz:
+  - q: What is the main purpose of Spanning Tree and Loop-Free Topology?
+    options:
+    - To understand or operate spanning tree and loop-free topology
+    - To encrypt all application data
+    - To replace IP routing
+    - To guarantee zero packet loss
+    answer: 0
+    why: This concept addresses the specific link-layer or physical-layer mechanism named in the question.
+  - q: Which diagnostic approach is most reliable for a silent network fault?
+    options:
+    - Change several settings at once
+    - Collect measurements, test one hypothesis and verify the result
+    - Assume link-up proves service health
+    - Ignore counters and rely only on user reports
+    answer: 1
+    why: A falsifiable hypothesis and controlled test isolate causes while preserving evidence.
+  - q: Which statement best describes a simplified engineering model?
+    options:
+    - It reproduces every vendor implementation exactly
+    - It removes the need for packet captures
+    - It explains selected relationships but must be checked against measurements
+    - It proves every fault has one cause
+    answer: 2
+    why: Models clarify relationships, but real devices and environments must still be measured.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small test or calculation for spanning tree and loop-free topology; record the expected result,
+    observed evidence, one controlled change and a verification result.

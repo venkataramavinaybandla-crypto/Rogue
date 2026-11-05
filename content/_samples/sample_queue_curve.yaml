@@ -1,0 +1,32 @@
+part:
+  id: sample-part-01
+  co: CO-1
+  title: Sample Queue Curve M/M/1 Test
+  order: 100
+  concept_ids:
+    - queue_curve-sample-test
+concepts:
+  - id: queue_curve-sample-test
+    code: "TEST-QUEUE_CURVE"
+    title: "Queue Curve M/M/1 Test"
+    session: 1
+    skilling_exp: 1
+    btl: 3
+    difficulty: 2
+    prereqs: []
+    eli5: "Interactive verification suite for queue_curve visualizer in Rogue telemetry system."
+    key_points:
+      - "Driven strictly by params, values, outputs, outcomes contract."
+      - "Features live bidirectional interaction and animation."
+    deep_dive: "Detailed operational verification of queue_curve component under Rogue dashboard engine."
+    formulas: []
+    viz:
+      type: "queue_curve"
+      description: "Sample test suite for queue_curve"
+      params: [{"name":"utilization","label":"Utilization","min":10,"max":98,"step":1,"default":50,"unit":"%"}]
+      compute: {"delay":"1 / (100 - utilization) * 1000"}
+      outcomes: [{"when":"utilization >= 80","title":"Severe Queueing Delay","explain":"Utilization past knee point.","severity":"fail"},{"when":"utilization >= 60 && utilization < 80","title":"Approaching Knee","explain":"Buffer occupancy is rising.","severity":"warn"},{"when":"utilization < 60","title":"Linear Operation","explain":"Queue is operating smoothly.","severity":"info"}]
+      combos_to_try: [{"set":{"utilization":95},"lesson":"Inspect severe delay explosion past knee."},{"set":{"utilization":40},"lesson":"Observe low linear delay."}]
+    common_mistakes: []
+    quiz: []
+    exam_tags: ["diagnostic", "sample"]

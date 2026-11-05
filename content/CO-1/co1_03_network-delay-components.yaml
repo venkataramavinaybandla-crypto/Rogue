@@ -1,0 +1,535 @@
+part:
+  id: co1-part-03
+  co: CO1
+  title: Network Delay Components and End-to-End Delay
+  order: 3
+  concept_ids:
+  - serialization-delay
+  - propagation-delay
+  - processing-delay
+  - queueing-delay
+  - end-to-end-delay-equation
+concepts:
+- id: serialization-delay
+  code: CN-CO1.3.1
+  title: Serialization (Transmission) Delay
+  session: 2
+  skilling_exp: null
+  btl: 2
+  difficulty: 1
+  prereqs:
+  - maximum-transmission-unit
+  eli5: Serialization delay is the time needed to push all the bits of a packet onto a link. A wider pipe lets the
+    same amount of data enter faster.
+  key_points:
+  - It depends on packet length and link transmission rate.
+  - More bits increase serialization delay.
+  - A higher bit rate reduces serialization delay for the same packet.
+  - Use bits with bits per second, not bytes with bits per second.
+  deep_dive: Serialization delay, also called transmission delay in many networking texts, is the time required
+    for a sender to place every bit of a packet onto the transmission medium. It is determined by packet length
+    and link rate; it is not the time for the first bit to travel to the receiver. Convert packet length from bytes
+    to bits before dividing by a rate expressed in bits per second. For example, a 1500-byte packet contains 12,000
+    bits. On a 100 Mb/s link, serialization takes 120 microseconds. Increasing the link rate reduces this component,
+    while increasing packet size raises it. Serialization delay is distinct from propagation delay, which depends
+    on the physical path and signal speed. When accounting for a transfer, apply the formula at each link where
+    the packet is serialized. The handout asks students to account for every microsecond using measured evidence,
+    so the packet size and actual link rate used in the calculation should be stated.
+  formulas:
+  - id: serialization
+    latex: d_{trans}=\frac{L}{R}
+    vars:
+      d_{trans: serialization delay in seconds
+      L: packet length in bits
+      R: link rate in bits per second
+    example: A 1500-byte packet is 12000 bits. At 100000000 bit/s, d=12000/100000000=0.00012 s=120 μs.
+  viz:
+    type: custom
+    description: Adjust link rate and observe serialization (transmission) delay as the selected network condition
+      changes.
+    params:
+    - name: rate
+      label: Link rate
+      min: 1
+      max: 1000
+      step: 1
+      default: 100
+      unit: Mb/s
+    compute:
+      delay_us: 12000 / (rate * 1000000) * 1000000
+    outcomes:
+    - when: rate >= 100
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: rate >= 10 && rate < 100
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: rate < 10
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        rate: 100
+      lesson: At 100 Mb/s, the 1500-byte packet takes 120 microseconds to serialize.
+    - set:
+        rate: 20
+      lesson: A slower link increases the serialization time.
+    - set:
+        rate: 2
+      lesson: A very low rate makes serialization a dominant delay component.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of serialization (transmission) delay?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Calculate serialization delay for a 1500-byte packet on 10 Mb/s, 100 Mb/s, and 1 Gb/s links.
+- id: propagation-delay
+  code: CN-CO1.3.2
+  title: Propagation Delay
+  session: 2
+  skilling_exp: null
+  btl: 2
+  difficulty: 1
+  prereqs:
+  - serialization-delay
+  eli5: A runner needs time to travel from one end of a road to the other. A signal also needs time to travel along
+    a cable or through the air, even after it has been sent.
+  key_points:
+  - It depends on physical distance and signal propagation speed.
+  - It does not depend on packet length.
+  - The medium affects propagation speed.
+  - Long-distance paths can have significant propagation delay even on fast links.
+  deep_dive: Propagation delay is the time taken by a signal to travel from one end of a physical link to the other.
+    It is calculated from path distance and the propagation speed of the signal in that medium. Unlike serialization
+    delay, propagation delay does not increase merely because the packet contains more bits; the first bit and last
+    bit each travel across the link after they enter it. The signal speed is generally lower than the speed of light
+    in vacuum and depends on the medium. A packet crossing several links accumulates propagation delay across those
+    physical segments. This component explains why high-bandwidth long-distance paths can still have substantial
+    round-trip time. When measuring end-to-end delay, do not confuse propagation time with the time needed to place
+    bits onto a link. A useful calculation must state the distance, the assumed propagation speed, and whether the
+    result is one-way or round-trip.
+  formulas:
+  - id: propagation
+    latex: d_{prop}=\frac{D}{S}
+    vars:
+      d_{prop: propagation delay in seconds
+      D: physical path distance in metres
+      S: signal propagation speed in metres per second
+    example: For 100 km (100000 m) at 2×10^8 m/s, d=100000/(2×10^8)=0.0005 s=0.5 ms.
+  viz:
+    type: timeline
+    description: Adjust path distance and observe propagation delay as the selected network condition changes.
+    params:
+    - name: distance
+      label: Path distance
+      min: 1
+      max: 1000
+      step: 1
+      default: 100
+      unit: km
+    compute:
+      delay_ms: distance * 1000 / 200000000 * 1000
+    outcomes:
+    - when: distance <= 100
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: distance > 100 && distance <= 500
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: distance > 500
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        distance: 100
+      lesson: A 100 km path contributes 0.5 ms one-way at the assumed signal speed.
+    - set:
+        distance: 300
+      lesson: Longer physical distance increases propagation delay linearly.
+    - set:
+        distance: 900
+      lesson: A very long path can dominate the delay budget.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of propagation delay?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Estimate one-way propagation delay for a 100 km fibre path using 2×10^8 m/s, then calculate the round-trip
+    propagation component.
+- id: processing-delay
+  code: CN-CO1.3.3
+  title: Processing Delay
+  session: 2
+  skilling_exp: null
+  btl: 2
+  difficulty: 1
+  prereqs:
+  - propagation-delay
+  eli5: A teacher needs time to read a form, check it, and decide where it should go. A router also needs time to
+    inspect a packet and decide what to do with it.
+  key_points:
+  - Processing delay is time spent examining and handling a packet at a node.
+  - It can include header checks and forwarding decisions.
+  - It depends on device architecture, configuration, and load.
+  - It is distinct from waiting in a queue.
+  deep_dive: 'Processing delay is the time a network node spends examining a packet and carrying out the required
+    operations before forwarding or delivering it. A router may inspect header fields, perform a forwarding-table
+    lookup, apply policy, update fields, and prepare the packet for an outgoing interface. The exact operations
+    and their cost depend on the device and implementation. Processing delay is not the same as queueing delay:
+    processing is active work on the packet, whereas queueing is time spent waiting for a resource to become available.
+    Modern network devices often perform forwarding in specialized hardware, so processing delay may be small and
+    relatively stable under supported conditions. However, software forwarding, complex policy, or device overload
+    can increase it. In a measured delay budget, processing delay should be identified separately rather than hidden
+    inside a generic ''router delay''. It can be estimated from timestamped observations at a node or characterized
+    using controlled tests.'
+  formulas: []
+  viz:
+    type: timeline
+    description: Adjust processing time per node and observe processing delay as the selected network condition
+      changes.
+    params:
+    - name: processing_us
+      label: Processing time per node
+      min: 0
+      max: 1000
+      step: 10
+      default: 50
+      unit: microseconds
+    compute:
+      total_us: processing_us * 4
+    outcomes:
+    - when: processing_us <= 100
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: processing_us > 100 && processing_us <= 300
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: processing_us > 300
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        processing_us: 50
+      lesson: Four modeled nodes contribute 200 microseconds of processing.
+    - set:
+        processing_us: 200
+      lesson: Higher per-node processing time accumulates across hops.
+    - set:
+        processing_us: 500
+      lesson: Large processing cost at every node can dominate the path.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of processing delay?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Create a four-router example and calculate total processing delay when each router contributes 50 microseconds.
+- id: queueing-delay
+  code: CN-CO1.3.4
+  title: Queueing Delay
+  session: 2
+  skilling_exp: null
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - processing-delay
+  eli5: People waiting in a checkout line experience waiting time before the cashier serves them. Packets can also
+    wait in a line when traffic arrives faster than a link or device can handle it.
+  key_points:
+  - Queueing delay is waiting time before service begins.
+  - It depends on arrival rate, service rate, and burstiness.
+  - It can vary greatly as utilization approaches capacity.
+  - A larger buffer may reduce immediate drops but can increase waiting time.
+  deep_dive: Queueing delay is the time a packet waits in a buffer before it can be transmitted or processed. It
+    depends on the relationship between packet arrival rate and service capacity, as well as burstiness and the
+    queueing discipline. When average arrival demand is comfortably below service capacity, queues may remain short.
+    As utilization approaches 100%, small bursts or timing variations can create long queues, causing delay to rise
+    sharply. If arrivals exceed service capacity for long enough, the queue fills and packets are dropped. Increasing
+    buffer capacity can absorb bursts, but it does not create additional link capacity and may increase delay when
+    the buffer remains full. The CO1 handout emphasizes the queueing-delay knee and buffer behavior in its queueing
+    experiment. Therefore, queueing delay should be measured under varying load rather than assumed to be constant.
+    Distinguish average delay from tail delay, because a small fraction of packets may experience much longer waits.
+  formulas:
+  - id: utilization
+    latex: \rho=\frac{\lambda}{\mu}
+    vars:
+      \rho: utilization or offered-load ratio
+      \lambda: average arrival rate
+      \mu: average service rate
+    example: If packets arrive at 800 packets/s and a server can serve 1000 packets/s, utilization is 800/1000=0.8
+      or 80%.
+  viz:
+    type: queue_curve
+    description: Adjust queue utilization and observe queueing delay as the selected network condition changes.
+    params:
+    - name: utilization
+      label: Queue utilization
+      min: 0
+      max: 1.2
+      step: 0.01
+      default: 0.5
+      unit: ratio
+    compute:
+      utilization_pct: utilization * 100
+    outcomes:
+    - when: utilization <= 0.7
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: utilization > 0.7 && utilization <= 0.9
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: utilization > 0.9
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        utilization: 0.5
+      lesson: At moderate utilization, the queue is usually easier to control.
+    - set:
+        utilization: 0.8
+      lesson: The queueing-delay knee is approaching.
+    - set:
+        utilization: 0.98
+      lesson: Near saturation, small bursts can cause large queues or loss.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of queueing delay?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Sketch how queueing delay changes at 50%, 80%, and 98% utilization; explain why the last step is not
+    a small linear increase.
+- id: end-to-end-delay-equation
+  code: CN-CO1.3.5
+  title: End-to-End Network Delay Equation
+  session: 2
+  skilling_exp: null
+  btl: 4
+  difficulty: 2
+  prereqs:
+  - serialization-delay
+  - propagation-delay
+  - processing-delay
+  - queueing-delay
+  eli5: A parcel's total journey time includes packing it, travelling between towns, waiting at depots, and being
+    checked at each stop. A packet's end-to-end delay is also made from several separate pieces.
+  key_points:
+  - A one-way path delay sums transmission, propagation, processing, and queueing components across the path.
+  - Each link and each node can contribute different values.
+  - The accounting boundary must be explicit.
+  - Use consistent time units before adding values.
+  deep_dive: The end-to-end delay of a packet is obtained by accounting for the delay components encountered along
+    its path. For a path with multiple links and routers, sum the serialization and propagation delays for each
+    link and the processing and queueing delays at each relevant node. A common single-hop expression is the sum
+    of nodal processing, queueing, transmission, and propagation delays. This expression is a framework for measurement,
+    not a claim that every component is identical at every hop. Serialization depends on packet length and link
+    rate; propagation depends on distance and signal speed; processing depends on node work; and queueing depends
+    on traffic conditions. To defend a result, state whether it is one-way or round-trip, identify the number of
+    hops, and convert all terms to a common unit before summing. The handout explicitly asks students to account
+    for every microsecond using captures rather than descriptions, so the equation should be paired with timestamped
+    evidence.
+  formulas:
+  - id: nodal_delay
+    latex: d_{nodal}=d_{proc}+d_{queue}+d_{trans}+d_{prop}
+    vars:
+      d_{nodal: delay at one network node/link segment
+      d_{proc: processing delay
+      d_{queue: queueing delay
+      d_{trans: serialization delay
+      d_{prop: propagation delay
+    example: If the four components are 0.02 ms, 0.30 ms, 0.12 ms, and 0.50 ms, total nodal contribution is 0.94
+      ms.
+  viz:
+    type: timeline
+    description: Adjust queueing delay and observe end-to-end network delay equation as the selected network condition
+      changes.
+    params:
+    - name: queue_ms
+      label: Queueing delay
+      min: 0
+      max: 20
+      step: 0.1
+      default: 1
+      unit: ms
+    compute:
+      total_ms: 0.02 + 0.3 + 0.12 + 0.5 + queue_ms
+    outcomes:
+    - when: queue_ms <= 2
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: queue_ms > 2 && queue_ms <= 8
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: queue_ms > 8
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        queue_ms: 1
+      lesson: Total delay is 1.94 ms for the stated fixed components.
+    - set:
+        queue_ms: 5
+      lesson: Queueing adds a larger share to the total.
+    - set:
+        queue_ms: 15
+      lesson: Queueing dominates the modeled delay budget.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of end-to-end network delay equation?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Build a four-term delay budget with values in milliseconds, convert all values to the same unit, and
+    show the sum.

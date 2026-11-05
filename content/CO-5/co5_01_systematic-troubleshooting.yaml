@@ -1,0 +1,348 @@
+part:
+  id: co5_01
+  co: CO-5
+  title: Systematic Troubleshooting
+  order: 1
+  concept_ids:
+  - co5-troubleshooting-problem-statement
+  - co5-fault-isolation-evidence
+  - co5-one-change-rollback-verification
+concepts:
+- id: co5-troubleshooting-problem-statement
+  code: CN-CO5.01.1
+  title: Problem Statements and Falsifiable Hypotheses
+  session: 17
+  skilling_exp: 21
+  btl: 4
+  difficulty: 2
+  prereqs: []
+  eli5: Good troubleshooting begins by describing exactly what is broken and proposing a cause that can be tested.
+    A useful hypothesis predicts an observable result.
+  key_points:
+  - A problem statement identifies affected users or systems, symptoms, scope and time window.
+  - A hypothesis proposes a specific cause that can be disproved by evidence.
+  - A good test predicts what should happen if the hypothesis is true and what should happen if it is false.
+  - Baseline measurements prevent normal variation from being mistaken for a fault.
+  - Troubleshooting should separate observed facts from assumptions.
+  deep_dive: 'Problem Statements and Falsifiable Hypotheses belongs to Systematic Troubleshooting in CO-5, which
+    focuses on evaluating and operating the network that has already been built. The aim is to turn an operational
+    symptom into a defensible conclusion supported by repeatable evidence. Start by defining the service behaviour
+    that is failing, the affected scope and the time interval. State a hypothesis that predicts an observable result,
+    then select a test that can distinguish it from competing explanations. Collect evidence from relevant endpoints
+    and intermediate systems, including counters, logs, traces, packet observations and configuration state. The
+    formula included with this concept is a compact model: identify every variable, preserve units, state assumptions
+    and explain the limits of the result. The visualization is a learning aid rather than a complete implementation
+    of a vendor device or production control plane. For a real change, estimate the blast radius, make one controlled
+    adjustment, retain a rollback path and repeat the original test. Verification should demonstrate service restoration
+    and check for regressions, not merely confirm that a command returned successfully. Document the hypothesis,
+    test, evidence, change and outcome so another engineer can reproduce the reasoning. This disciplined process
+    reduces guesswork and makes network operations safer, faster and easier to audit.'
+  formulas:
+  - id: co5-troubleshooting-problem-statement-formula
+    latex: H = testable prediction
+    vars: 'H: hypothesis expressed as a prediction'
+    example: 'Hypothesis: DNS resolution is failing. Prediction: queries to the configured resolver time out while
+      queries to a known-good resolver succeed.'
+  viz:
+    type: timeline
+    description: Explore the operational relationship behind problem statements and falsifiable hypotheses using
+      controlled input values; compare the simplified result with measured system behaviour.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified learning model.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying operational condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Establish a baseline with Input A twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed result.
+  common_mistakes:
+  - Writing vague hypotheses such as 'the network is slow'.
+  - Treating an assumption as measured evidence.
+  - Changing configuration before establishing a baseline.
+  quiz:
+  - q: What is the central purpose of Problem Statements and Falsifiable Hypotheses?
+    options:
+    - Apply or analyze problem statements and falsifiable hypotheses in network operations
+    - Encrypt all application traffic
+    - Replace routing protocols
+    - Guarantee that no network fault can occur
+    answer: 0
+    why: The concept supports the specific operational capability named in the question.
+  - q: Which practice best supports reliable fault resolution?
+    options:
+    - Make several changes before measuring
+    - Use a falsifiable hypothesis, controlled test and recorded evidence
+    - Assume a green dashboard proves every user path works
+    - Skip verification after a configuration change
+    answer: 1
+    why: A testable hypothesis and evidence-based workflow distinguish causes and validate the fix.
+  - q: What should happen after a risky network change?
+    options:
+    - Delete the previous configuration immediately
+    - Assume success if the command completed
+    - Verify service behaviour and retain a rollback path
+    - Avoid documenting the change
+    answer: 2
+    why: Operational success requires service-level verification and a safe recovery option.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Create a small practical exercise for problem statements and falsifiable hypotheses. State the expected
+    behaviour, collect evidence, make one controlled change if needed, and record verification and rollback considerations.
+- id: co5-fault-isolation-evidence
+  code: CN-CO5.01.2
+  title: Testing, Elimination and Evidence-Based Fault Isolation
+  session: 17
+  skilling_exp: 21
+  btl: 4
+  difficulty: 2
+  prereqs:
+  - co5-troubleshooting-problem-statement
+  eli5: Fault isolation is a process of testing likely causes and removing explanations that do not fit the evidence.
+    Each test should narrow the search.
+  key_points:
+  - Choose tests that distinguish between competing hypotheses.
+  - Use packet captures, logs, counters and controlled probes as evidence.
+  - Elimination means rejecting causes contradicted by test results.
+  - Correlate observations across the client, network path and service endpoint.
+  - Record timestamps, commands, outputs and environmental conditions for repeatability.
+  deep_dive: 'Testing, Elimination and Evidence-Based Fault Isolation belongs to Systematic Troubleshooting in CO-5,
+    which focuses on evaluating and operating the network that has already been built. The aim is to turn an operational
+    symptom into a defensible conclusion supported by repeatable evidence. Start by defining the service behaviour
+    that is failing, the affected scope and the time interval. State a hypothesis that predicts an observable result,
+    then select a test that can distinguish it from competing explanations. Collect evidence from relevant endpoints
+    and intermediate systems, including counters, logs, traces, packet observations and configuration state. The
+    formula included with this concept is a compact model: identify every variable, preserve units, state assumptions
+    and explain the limits of the result. The visualization is a learning aid rather than a complete implementation
+    of a vendor device or production control plane. For a real change, estimate the blast radius, make one controlled
+    adjustment, retain a rollback path and repeat the original test. Verification should demonstrate service restoration
+    and check for regressions, not merely confirm that a command returned successfully. Document the hypothesis,
+    test, evidence, change and outcome so another engineer can reproduce the reasoning. This disciplined process
+    reduces guesswork and makes network operations safer, faster and easier to audit.'
+  formulas:
+  - id: co5-fault-isolation-evidence-formula
+    latex: P(H|E) ∝ P(E|H)P(H)
+    vars: 'P(H|E): plausibility of hypothesis after evidence; P(E|H): likelihood of evidence if hypothesis is true;
+      P(H): prior plausibility'
+    example: If a gateway ping succeeds but a service TCP connection fails, a local-link failure becomes less likely
+      while a service-path or policy issue remains plausible.
+  viz:
+    type: timeline
+    description: Explore the operational relationship behind testing, elimination and evidence-based fault isolation
+      using controlled input values; compare the simplified result with measured system behaviour.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified learning model.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying operational condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Establish a baseline with Input A twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed result.
+  common_mistakes:
+  - Running tests that cannot distinguish between hypotheses.
+  - Ignoring evidence from one side of a connection.
+  - Declaring a root cause from a single correlated symptom.
+  quiz:
+  - q: What is the central purpose of Testing, Elimination and Evidence-Based Fault Isolation?
+    options:
+    - Apply or analyze testing, elimination and evidence-based fault isolation in network operations
+    - Encrypt all application traffic
+    - Replace routing protocols
+    - Guarantee that no network fault can occur
+    answer: 0
+    why: The concept supports the specific operational capability named in the question.
+  - q: Which practice best supports reliable fault resolution?
+    options:
+    - Make several changes before measuring
+    - Use a falsifiable hypothesis, controlled test and recorded evidence
+    - Assume a green dashboard proves every user path works
+    - Skip verification after a configuration change
+    answer: 1
+    why: A testable hypothesis and evidence-based workflow distinguish causes and validate the fix.
+  - q: What should happen after a risky network change?
+    options:
+    - Delete the previous configuration immediately
+    - Assume success if the command completed
+    - Verify service behaviour and retain a rollback path
+    - Avoid documenting the change
+    answer: 2
+    why: Operational success requires service-level verification and a safe recovery option.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Create a small practical exercise for testing, elimination and evidence-based fault isolation. State
+    the expected behaviour, collect evidence, make one controlled change if needed, and record verification and
+    rollback considerations.
+- id: co5-one-change-rollback-verification
+  code: CN-CO5.01.3
+  title: One-Change Fixes, Blast Radius, Rollback and Verification
+  session: 17
+  skilling_exp: 21
+  btl: 5
+  difficulty: 3
+  prereqs:
+  - co5-fault-isolation-evidence
+  eli5: After identifying a likely cause, make one controlled change, understand who it could affect, and have a
+    rollback ready. Then verify that the original service works.
+  key_points:
+  - A one-change fix makes cause and effect easier to interpret.
+  - Blast radius describes the systems, users and services potentially affected.
+  - A rollback plan states how to restore the previous known-good state.
+  - Verification repeats the original failing test and checks for regressions.
+  - A complete incident record includes hypothesis, test, evidence, fix and verification.
+  deep_dive: 'One-Change Fixes, Blast Radius, Rollback and Verification belongs to Systematic Troubleshooting in
+    CO-5, which focuses on evaluating and operating the network that has already been built. The aim is to turn
+    an operational symptom into a defensible conclusion supported by repeatable evidence. Start by defining the
+    service behaviour that is failing, the affected scope and the time interval. State a hypothesis that predicts
+    an observable result, then select a test that can distinguish it from competing explanations. Collect evidence
+    from relevant endpoints and intermediate systems, including counters, logs, traces, packet observations and
+    configuration state. The formula included with this concept is a compact model: identify every variable, preserve
+    units, state assumptions and explain the limits of the result. The visualization is a learning aid rather than
+    a complete implementation of a vendor device or production control plane. For a real change, estimate the blast
+    radius, make one controlled adjustment, retain a rollback path and repeat the original test. Verification should
+    demonstrate service restoration and check for regressions, not merely confirm that a command returned successfully.
+    Document the hypothesis, test, evidence, change and outcome so another engineer can reproduce the reasoning.
+    This disciplined process reduces guesswork and makes network operations safer, faster and easier to audit.'
+  formulas:
+  - id: co5-one-change-rollback-verification-formula
+    latex: T_restore = T_detect + T_decide + T_change + T_verify
+    vars: 'T_restore: restoration time; terms: detection, decision, change and verification durations'
+    example: If detection takes 4 min, decision 3 min, change 2 min and verification 5 min, restoration time is
+      14 min.
+  viz:
+    type: timeline
+    description: Explore the operational relationship behind one-change fixes, blast radius, rollback and verification
+      using controlled input values; compare the simplified result with measured system behaviour.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified learning model.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying operational condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Establish a baseline with Input A twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed result.
+  common_mistakes:
+  - Making several simultaneous changes.
+  - Applying a fix without a rollback path.
+  - Verifying only that the configuration command succeeded.
+  quiz:
+  - q: What is the central purpose of One-Change Fixes, Blast Radius, Rollback and Verification?
+    options:
+    - Apply or analyze one-change fixes, blast radius, rollback and verification in network operations
+    - Encrypt all application traffic
+    - Replace routing protocols
+    - Guarantee that no network fault can occur
+    answer: 0
+    why: The concept supports the specific operational capability named in the question.
+  - q: Which practice best supports reliable fault resolution?
+    options:
+    - Make several changes before measuring
+    - Use a falsifiable hypothesis, controlled test and recorded evidence
+    - Assume a green dashboard proves every user path works
+    - Skip verification after a configuration change
+    answer: 1
+    why: A testable hypothesis and evidence-based workflow distinguish causes and validate the fix.
+  - q: What should happen after a risky network change?
+    options:
+    - Delete the previous configuration immediately
+    - Assume success if the command completed
+    - Verify service behaviour and retain a rollback path
+    - Avoid documenting the change
+    answer: 2
+    why: Operational success requires service-level verification and a safe recovery option.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Create a small practical exercise for one-change fixes, blast radius, rollback and verification. State
+    the expected behaviour, collect evidence, make one controlled change if needed, and record verification and
+    rollback considerations.

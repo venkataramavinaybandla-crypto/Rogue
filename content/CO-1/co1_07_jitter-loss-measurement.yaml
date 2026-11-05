@@ -1,0 +1,515 @@
+part:
+  id: co1-part-07
+  co: CO1
+  title: Jitter, Percentiles, Loss, Impairment, and Measurement Methodology
+  order: 7
+  concept_ids:
+  - latency-and-jitter
+  - latency-percentiles
+  - packet-loss-and-buffers
+  - network-impairment-baselines
+  - measurement-methodology
+concepts:
+- id: latency-and-jitter
+  code: CN-CO1.7.1
+  title: Latency and Jitter
+  session: 4
+  skilling_exp: 4
+  btl: 4
+  difficulty: 2
+  prereqs:
+  - end-to-end-delay-equation
+  eli5: Latency is how long one packet takes to reach its destination. Jitter is how much that travel time changes
+    from packet to packet. A bus that arrives at very different times each day has high timing variation.
+  key_points:
+  - Latency is a delay measurement between defined endpoints.
+  - Jitter describes variation in packet delay or packet arrival timing.
+  - The exact jitter calculation must be stated.
+  - Low average latency does not guarantee low jitter.
+  deep_dive: 'Latency is the time taken for data to travel between defined measurement points. It may be measured
+    one-way or as round-trip time, and the measurement boundary must be explicit. Jitter describes variation in
+    packet delay or packet arrival timing. Several jitter definitions exist, including differences between successive
+    packet delays, so a report must identify the chosen method rather than use the word without qualification. A
+    path can have low average latency but high variation, which can disrupt interactive or time-sensitive applications.
+    Queueing, route changes, contention, and variable processing can contribute to jitter. In CO1, the handout places
+    jitter alongside latency percentiles, impairment, packet loss, buffers, and baselines. Measure a sequence of
+    packets under stated conditions and report both central tendency and variation. Do not confuse jitter with packet
+    loss: jitter means timing varies, while loss means packets fail to arrive at the observation point.'
+  formulas: []
+  viz:
+    type: timeline
+    description: Adjust delay variation and observe latency and jitter as the selected network condition changes.
+    params:
+    - name: jitter_ms
+      label: Delay variation
+      min: 0
+      max: 100
+      step: 0.5
+      default: 5
+      unit: ms
+    compute:
+      variation: jitter_ms
+    outcomes:
+    - when: jitter_ms <= 10
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: jitter_ms > 10 && jitter_ms <= 30
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: jitter_ms > 30
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        jitter_ms: 5
+      lesson: Small delay variation may be acceptable for the chosen service target.
+    - set:
+        jitter_ms: 20
+      lesson: Moderate variation may require a larger playout buffer.
+    - set:
+        jitter_ms: 60
+      lesson: Large variation can cause late packet arrival and unstable user experience.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of latency and jitter?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Record ten packet delays, calculate the mean and successive-delay variation, and state exactly which
+    jitter definition you used.
+- id: latency-percentiles
+  code: CN-CO1.7.2
+  title: Latency Percentiles (p50, p95, p99)
+  session: 4
+  skilling_exp: 4
+  btl: 4
+  difficulty: 2
+  prereqs:
+  - latency-and-jitter
+  eli5: Imagine 100 students waiting for a bus. The median tells you what the middle student experiences, while
+    the 99th percentile tells you about the students near the very longest waits.
+  key_points:
+  - A percentile describes a position in a sorted measurement distribution.
+  - p50 is the median; p95 and p99 describe higher-delay tails.
+  - Tail percentiles reveal slow experiences hidden by averages.
+  - Sample size and percentile calculation method affect interpretation.
+  deep_dive: 'Latency percentiles summarize the distribution of observed delays. The p50 value is the median: approximately
+    half of observations are at or below it. The p95 and p99 values describe the upper tail, where a small fraction
+    of packets or requests experience longer delays. Averages can look healthy even when a meaningful minority of
+    users experience severe delay, which is why the handout highlights percentiles and the scenario where a dashboard
+    stays green while users experience faults. Percentile calculations require a sufficiently large and representative
+    sample, a defined time window, and a stated calculation method. Compare like with like: the same endpoints,
+    direction, workload, and measurement conditions. A p99 based on a tiny sample is unstable and should not be
+    presented as a reliable tail estimate. Report count, time interval, and percentiles together, and investigate
+    gaps between p50 and p99 as evidence of variability or intermittent congestion.'
+  formulas: []
+  viz:
+    type: bar_compare
+    description: Adjust p99 latency and observe latency percentiles (p50, p95, p99) as the selected network condition
+      changes.
+    params:
+    - name: tail_ms
+      label: p99 latency
+      min: 1
+      max: 1000
+      step: 1
+      default: 100
+      unit: ms
+    compute:
+      tail_ratio: tail_ms / 100
+    outcomes:
+    - when: tail_ms <= 120
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: tail_ms > 120 && tail_ms <= 300
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: tail_ms > 300
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        tail_ms: 100
+      lesson: The modeled p99 is close to the 100 ms baseline target.
+    - set:
+        tail_ms: 200
+      lesson: The tail is elevated even if the median remains low.
+    - set:
+        tail_ms: 600
+      lesson: A very high p99 indicates severe tail latency for a portion of observations.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of latency percentiles (p50, p95, p99)?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Create a sample of at least 100 latency measurements and report p50, p95, and p99 with the sample count
+    and time window.
+- id: packet-loss-and-buffers
+  code: CN-CO1.7.3
+  title: Packet Loss and Buffer Effects
+  session: 4
+  skilling_exp: 4
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - buffer-capacity-and-loss
+  - latency-percentiles
+  eli5: A waiting room can become full. When it is full, new arrivals may be turned away. A network buffer can also
+    fill up, causing packets to be dropped.
+  key_points:
+  - Packet loss is the fraction or count of packets not observed at the intended receiving point.
+  - Congestion and full buffers are possible causes, but not the only causes.
+  - Loss can trigger retransmission or degrade real-time traffic.
+  - Interpret loss together with queue occupancy, delay, and capture location.
+  deep_dive: Packet loss occurs when packets sent toward a destination do not arrive at the observation point within
+    the relevant measurement conditions. Congestion and full buffers are common causes, but loss may also result
+    from link errors, filtering, routing problems, or capture limitations. A loss rate should be calculated using
+    a clearly defined sent-packet denominator and a matching observation interval. For reliable transports, loss
+    may cause retransmission and additional delay; for real-time traffic, missing packets may be concealed or directly
+    affect media quality. Buffer behavior is important because increasing buffer size can reduce drops during bursts
+    while increasing queueing delay. The CO1 syllabus explicitly includes loss and buffers, and the skilling work
+    combines buffer analysis with performance baselines. Use captures at multiple points where possible to locate
+    the loss boundary. A single endpoint counter can show that loss occurred but may not identify where or why it
+    happened.
+  formulas:
+  - id: loss_rate
+    latex: P_{loss}=\frac{N_{sent}-N_{received}}{N_{sent}}\times100\%
+    vars:
+      P_{loss: packet loss percentage
+      N_{sent: number of packets sent in the measurement set
+      N_{received: number of matching packets received
+    example: If 10000 packets are sent and 9950 are received, loss is (10000-9950)/10000×100=0.5%.
+  viz:
+    type: packet_flow
+    description: Adjust packet loss and observe packet loss and buffer effects as the selected network condition
+      changes.
+    params:
+    - name: loss_pct
+      label: Packet loss
+      min: 0
+      max: 20
+      step: 0.1
+      default: 0.5
+      unit: percent
+    compute:
+      received_pct: 100 - loss_pct
+    outcomes:
+    - when: loss_pct <= 1
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: loss_pct > 1 && loss_pct <= 5
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: loss_pct > 5
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        loss_pct: 0.5
+      lesson: A low measured loss rate still needs interpretation against the service target.
+    - set:
+        loss_pct: 3
+      lesson: Moderate loss can cause retransmissions or visible media impairment.
+    - set:
+        loss_pct: 12
+      lesson: High loss strongly indicates degraded delivery and needs fault isolation.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of packet loss and buffer effects?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Calculate packet loss from sent and received counts, then compare it with queue occupancy and retransmission
+    observations.
+- id: network-impairment-baselines
+  code: CN-CO1.7.4
+  title: Network Impairment and Performance Baselines
+  session: 4
+  skilling_exp: 4
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - latency-percentiles
+  - packet-loss-and-buffers
+  eli5: A doctor needs a normal temperature before deciding whether someone has a fever. A network engineer also
+    needs a normal-performance baseline before deciding that a measurement is unusual.
+  key_points:
+  - A baseline records normal performance under documented conditions.
+  - Impairments can include added delay, jitter, loss, and bandwidth restriction.
+  - Compare impaired results with a baseline using the same test method.
+  - A baseline must identify workload, path, endpoints, and measurement period.
+  deep_dive: A performance baseline is a documented description of network behavior under known operating conditions.
+    It may include throughput, latency percentiles, jitter, loss, utilization, and queue occupancy. Network impairment
+    means a condition deliberately introduced or observed that changes normal behavior, such as added delay, delay
+    variation, packet loss, or a constrained rate. A baseline makes it possible to distinguish expected behavior
+    from a regression. Comparisons are meaningful only when the measurement method, endpoints, traffic pattern,
+    direction, and observation window are sufficiently consistent. The handout's CO1 skilling experiment asks students
+    to establish performance baselines, introduce network impairments, and analyze latency percentiles to identify
+    misleading measurements. The scenario of a green dashboard with user-visible faults reinforces the need to select
+    metrics that expose tail behavior and intermittent faults. Record both the baseline and impaired results, and
+    explain which changed variable could account for the difference.
+  formulas: []
+  viz:
+    type: bar_compare
+    description: Adjust added one-way delay and observe network impairment and performance baselines as the selected
+      network condition changes.
+    params:
+    - name: impairment
+      label: Added one-way delay
+      min: 0
+      max: 500
+      step: 5
+      default: 0
+      unit: ms
+    compute:
+      total_delay: 20 + impairment
+    outcomes:
+    - when: impairment <= 50
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: impairment > 50 && impairment <= 150
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: impairment > 150
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        impairment: 20
+      lesson: A small added delay is compared with the 20 ms baseline.
+    - set:
+        impairment: 100
+      lesson: The impairment materially changes the measured delay distribution.
+    - set:
+        impairment: 300
+      lesson: A large injected delay should be clearly visible against the baseline.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of network impairment and performance baselines?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Create a baseline and an impaired test run. Compare p50, p99, jitter, loss, and throughput, changing
+    only one impairment at a time.
+- id: measurement-methodology
+  code: CN-CO1.7.5
+  title: Network Measurement Methodology
+  session: 4
+  skilling_exp: 4
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - three-point-packet-capture
+  - network-impairment-baselines
+  eli5: A fair race needs the same start line, distance, and timing method for every runner. A fair network test
+    also needs clear endpoints, repeatable traffic, and trustworthy clocks.
+  key_points:
+  - Define the question, endpoints, direction, and measurement boundary before testing.
+  - Synchronize clocks when comparing timestamps across devices.
+  - Record sample size, interval, workload, units, and tool configuration.
+  - Repeat tests and report distributions, not only one result.
+  deep_dive: 'Network measurement methodology is the disciplined process of defining a performance question, selecting
+    appropriate observation points, collecting repeatable data, and interpreting results with known limitations.
+    Begin by stating the metric and boundary: for example, one-way delay from a sender interface to a receiver interface,
+    or application goodput over a fixed transfer. Document endpoints, path, direction, packet size, offered load,
+    sample count, observation interval, and tool settings. Synchronize clocks when comparing timestamps across devices,
+    and account for capture drops, offload behavior, and sampling limitations. Repeat measurements to distinguish
+    stable behavior from transient variation. Report units and distributions, including tail percentiles where appropriate.
+    The handout''s CO1 outcome emphasizes defending microsecond-level transfer timing from captures rather than
+    descriptions. It also includes impairment and baselines, so a sound method must preserve an un-impaired reference
+    and change one condition at a time. Avoid claiming causation from correlation alone; use a falsifiable hypothesis
+    and a test that can distinguish competing explanations.'
+  formulas: []
+  viz:
+    type: custom
+    description: Adjust number of samples and observe network measurement methodology as the selected network condition
+      changes.
+    params:
+    - name: sample_count
+      label: Number of samples
+      min: 1
+      max: 10000
+      step: 100
+      default: 1000
+      unit: packets
+    compute:
+      minimum_samples: sample_count
+    outcomes:
+    - when: sample_count >= 500
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: sample_count >= 100 && sample_count < 500
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: sample_count < 100
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        sample_count: 1000
+      lesson: A thousand observations provide a more useful distribution than a tiny sample.
+    - set:
+        sample_count: 250
+      lesson: A modest sample may be adequate for a rough check but weak for tail percentiles.
+    - set:
+        sample_count: 20
+      lesson: A very small sample makes p99 and rare-event conclusions unreliable.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of network measurement methodology?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: 'Write a one-page measurement plan for a file transfer: hypothesis, endpoints, capture points, workload,
+    sample interval, metrics, clock requirements, and limitations.'

@@ -1,0 +1,345 @@
+part:
+  id: co5_03
+  co: CO-5
+  title: ACLs and Stateful Firewalls
+  order: 3
+  concept_ids:
+  - co5-acl-filtering
+  - co5-stateful-firewalls
+  - co5-firewall-policy-diagnosis
+concepts:
+- id: co5-acl-filtering
+  code: CN-CO5.03.1
+  title: Access Control Lists and Packet Filtering
+  session: 18
+  skilling_exp: 22
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co5-troubleshooting-problem-statement
+  eli5: An ACL is an ordered set of rules that permits or denies traffic based on packet fields. A packet is evaluated
+    against the policy until a matching rule determines its treatment.
+  key_points:
+  - ACL rules commonly match source, destination, protocol and port information.
+  - Rule order matters when multiple rules could match the same packet.
+  - An implicit deny may apply when no explicit rule matches.
+  - A narrow, documented rule is safer than a broad permit.
+  - Test both intended allowed traffic and traffic that should remain blocked.
+  deep_dive: 'Access Control Lists and Packet Filtering belongs to ACLs and Stateful Firewalls in CO-5, which focuses
+    on evaluating and operating the network that has already been built. The aim is to turn an operational symptom
+    into a defensible conclusion supported by repeatable evidence. Start by defining the service behaviour that
+    is failing, the affected scope and the time interval. State a hypothesis that predicts an observable result,
+    then select a test that can distinguish it from competing explanations. Collect evidence from relevant endpoints
+    and intermediate systems, including counters, logs, traces, packet observations and configuration state. The
+    formula included with this concept is a compact model: identify every variable, preserve units, state assumptions
+    and explain the limits of the result. The visualization is a learning aid rather than a complete implementation
+    of a vendor device or production control plane. For a real change, estimate the blast radius, make one controlled
+    adjustment, retain a rollback path and repeat the original test. Verification should demonstrate service restoration
+    and check for regressions, not merely confirm that a command returned successfully. Document the hypothesis,
+    test, evidence, change and outcome so another engineer can reproduce the reasoning. This disciplined process
+    reduces guesswork and makes network operations safer, faster and easier to audit.'
+  formulas:
+  - id: co5-acl-filtering-formula
+    latex: Match = first_rule(packet)
+    vars: 'first_rule: earliest rule matching the packet; packet: fields evaluated by the policy'
+    example: If rule 1 denies TCP port 22 from a subnet and rule 2 permits all TCP, an SSH packet from that subnet
+      is denied because the earlier rule matches.
+  viz:
+    type: state_machine
+    description: Explore the operational relationship behind access control lists and packet filtering using controlled
+      input values; compare the simplified result with measured system behaviour.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified learning model.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying operational condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Establish a baseline with Input A twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed result.
+  common_mistakes:
+  - Placing a broad permit before a specific deny.
+  - Forgetting implicit deny behaviour.
+  - Testing only permitted traffic and not negative cases.
+  quiz:
+  - q: What is the central purpose of Access Control Lists and Packet Filtering?
+    options:
+    - Apply or analyze access control lists and packet filtering in network operations
+    - Encrypt all application traffic
+    - Replace routing protocols
+    - Guarantee that no network fault can occur
+    answer: 0
+    why: The concept supports the specific operational capability named in the question.
+  - q: Which practice best supports reliable fault resolution?
+    options:
+    - Make several changes before measuring
+    - Use a falsifiable hypothesis, controlled test and recorded evidence
+    - Assume a green dashboard proves every user path works
+    - Skip verification after a configuration change
+    answer: 1
+    why: A testable hypothesis and evidence-based workflow distinguish causes and validate the fix.
+  - q: What should happen after a risky network change?
+    options:
+    - Delete the previous configuration immediately
+    - Assume success if the command completed
+    - Verify service behaviour and retain a rollback path
+    - Avoid documenting the change
+    answer: 2
+    why: Operational success requires service-level verification and a safe recovery option.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Create a small practical exercise for access control lists and packet filtering. State the expected
+    behaviour, collect evidence, make one controlled change if needed, and record verification and rollback considerations.
+- id: co5-stateful-firewalls
+  code: CN-CO5.03.2
+  title: Stateful Firewalls and Connection Tracking
+  session: 18
+  skilling_exp: 22
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co5-acl-filtering
+  eli5: A stateful firewall remembers connection information. It can allow return traffic for an established connection
+    without requiring a separate broad inbound rule.
+  key_points:
+  - Stateful inspection tracks connection state such as new, established and related.
+  - Return packets can be permitted based on an existing tracked flow.
+  - Connection tracking has timeouts and finite resource limits.
+  - Asymmetric routing can cause packets to bypass the device holding connection state.
+  - Firewall policy order and state rules must be tested with full bidirectional flows.
+  deep_dive: 'Stateful Firewalls and Connection Tracking belongs to ACLs and Stateful Firewalls in CO-5, which focuses
+    on evaluating and operating the network that has already been built. The aim is to turn an operational symptom
+    into a defensible conclusion supported by repeatable evidence. Start by defining the service behaviour that
+    is failing, the affected scope and the time interval. State a hypothesis that predicts an observable result,
+    then select a test that can distinguish it from competing explanations. Collect evidence from relevant endpoints
+    and intermediate systems, including counters, logs, traces, packet observations and configuration state. The
+    formula included with this concept is a compact model: identify every variable, preserve units, state assumptions
+    and explain the limits of the result. The visualization is a learning aid rather than a complete implementation
+    of a vendor device or production control plane. For a real change, estimate the blast radius, make one controlled
+    adjustment, retain a rollback path and repeat the original test. Verification should demonstrate service restoration
+    and check for regressions, not merely confirm that a command returned successfully. Document the hypothesis,
+    test, evidence, change and outcome so another engineer can reproduce the reasoning. This disciplined process
+    reduces guesswork and makes network operations safer, faster and easier to audit.'
+  formulas:
+  - id: co5-stateful-firewalls-formula
+    latex: Flow_key = (src,dst,protocol,ports)
+    vars: 'src/dst: endpoint addresses; protocol: transport protocol; ports: transport ports'
+    example: A TCP flow from 10.0.0.5:51000 to 203.0.113.8:443 is identified by its endpoint tuple and protocol
+      for connection tracking.
+  viz:
+    type: state_machine
+    description: Explore the operational relationship behind stateful firewalls and connection tracking using controlled
+      input values; compare the simplified result with measured system behaviour.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified learning model.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying operational condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Establish a baseline with Input A twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed result.
+  common_mistakes:
+  - Assuming a stateful firewall automatically fixes asymmetric routing.
+  - Confusing an ACL decision with connection state.
+  - Ignoring stale or exhausted connection-tracking entries.
+  quiz:
+  - q: What is the central purpose of Stateful Firewalls and Connection Tracking?
+    options:
+    - Apply or analyze stateful firewalls and connection tracking in network operations
+    - Encrypt all application traffic
+    - Replace routing protocols
+    - Guarantee that no network fault can occur
+    answer: 0
+    why: The concept supports the specific operational capability named in the question.
+  - q: Which practice best supports reliable fault resolution?
+    options:
+    - Make several changes before measuring
+    - Use a falsifiable hypothesis, controlled test and recorded evidence
+    - Assume a green dashboard proves every user path works
+    - Skip verification after a configuration change
+    answer: 1
+    why: A testable hypothesis and evidence-based workflow distinguish causes and validate the fix.
+  - q: What should happen after a risky network change?
+    options:
+    - Delete the previous configuration immediately
+    - Assume success if the command completed
+    - Verify service behaviour and retain a rollback path
+    - Avoid documenting the change
+    answer: 2
+    why: Operational success requires service-level verification and a safe recovery option.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Create a small practical exercise for stateful firewalls and connection tracking. State the expected
+    behaviour, collect evidence, make one controlled change if needed, and record verification and rollback considerations.
+- id: co5-firewall-policy-diagnosis
+  code: CN-CO5.03.3
+  title: Firewall Rule Ordering and Policy Diagnosis
+  session: 18
+  skilling_exp: 22
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co5-stateful-firewalls
+  eli5: A firewall policy is evaluated in a defined order. Diagnosing a policy problem means finding the exact rule
+    and state decision that handled the traffic.
+  key_points:
+  - Document rule purpose, owner, scope and expected traffic.
+  - Inspect counters or logs to identify which rule matched.
+  - Specific exceptions generally need to precede broader rules.
+  - Test both forward and return directions where state or routing may differ.
+  - Remove obsolete rules only after confirming dependencies and rollback options.
+  deep_dive: 'Firewall Rule Ordering and Policy Diagnosis belongs to ACLs and Stateful Firewalls in CO-5, which
+    focuses on evaluating and operating the network that has already been built. The aim is to turn an operational
+    symptom into a defensible conclusion supported by repeatable evidence. Start by defining the service behaviour
+    that is failing, the affected scope and the time interval. State a hypothesis that predicts an observable result,
+    then select a test that can distinguish it from competing explanations. Collect evidence from relevant endpoints
+    and intermediate systems, including counters, logs, traces, packet observations and configuration state. The
+    formula included with this concept is a compact model: identify every variable, preserve units, state assumptions
+    and explain the limits of the result. The visualization is a learning aid rather than a complete implementation
+    of a vendor device or production control plane. For a real change, estimate the blast radius, make one controlled
+    adjustment, retain a rollback path and repeat the original test. Verification should demonstrate service restoration
+    and check for regressions, not merely confirm that a command returned successfully. Document the hypothesis,
+    test, evidence, change and outcome so another engineer can reproduce the reasoning. This disciplined process
+    reduces guesswork and makes network operations safer, faster and easier to audit.'
+  formulas:
+  - id: co5-firewall-policy-diagnosis-formula
+    latex: P_match = first matching rule index
+    vars: 'P_match: position of the first matching rule in ordered policy'
+    example: A packet matching rules 2 and 5 is handled by rule 2 because it is encountered first.
+  viz:
+    type: state_machine
+    description: Explore the operational relationship behind firewall rule ordering and policy diagnosis using controlled
+      input values; compare the simplified result with measured system behaviour.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified learning model.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying operational condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Establish a baseline with Input A twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed result.
+  common_mistakes:
+  - Assuming the visually nearest rule is the one applied.
+  - Ignoring direction and interface context.
+  - Removing a rule based only on its age or name.
+  quiz:
+  - q: What is the central purpose of Firewall Rule Ordering and Policy Diagnosis?
+    options:
+    - Apply or analyze firewall rule ordering and policy diagnosis in network operations
+    - Encrypt all application traffic
+    - Replace routing protocols
+    - Guarantee that no network fault can occur
+    answer: 0
+    why: The concept supports the specific operational capability named in the question.
+  - q: Which practice best supports reliable fault resolution?
+    options:
+    - Make several changes before measuring
+    - Use a falsifiable hypothesis, controlled test and recorded evidence
+    - Assume a green dashboard proves every user path works
+    - Skip verification after a configuration change
+    answer: 1
+    why: A testable hypothesis and evidence-based workflow distinguish causes and validate the fix.
+  - q: What should happen after a risky network change?
+    options:
+    - Delete the previous configuration immediately
+    - Assume success if the command completed
+    - Verify service behaviour and retain a rollback path
+    - Avoid documenting the change
+    answer: 2
+    why: Operational success requires service-level verification and a safe recovery option.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Create a small practical exercise for firewall rule ordering and policy diagnosis. State the expected
+    behaviour, collect evidence, make one controlled change if needed, and record verification and rollback considerations.

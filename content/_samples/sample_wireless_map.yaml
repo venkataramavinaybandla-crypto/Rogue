@@ -1,0 +1,32 @@
+part:
+  id: sample-part-11
+  co: CO-1
+  title: Sample Wireless RF Propagation Test
+  order: 110
+  concept_ids:
+    - wireless_map-sample-test
+concepts:
+  - id: wireless_map-sample-test
+    code: "TEST-WIRELESS_MAP"
+    title: "Wireless RF Propagation Test"
+    session: 1
+    skilling_exp: 1
+    btl: 3
+    difficulty: 2
+    prereqs: []
+    eli5: "Interactive verification suite for wireless_map visualizer in Rogue telemetry system."
+    key_points:
+      - "Driven strictly by params, values, outputs, outcomes contract."
+      - "Features live bidirectional interaction and animation."
+    deep_dive: "Detailed operational verification of wireless_map component under Rogue dashboard engine."
+    formulas: []
+    viz:
+      type: "wireless_map"
+      description: "Sample test suite for wireless_map"
+      params: [{"name":"distance","label":"Client Distance","min":10,"max":120,"step":5,"default":50,"unit":"m"}]
+      compute: {"path_loss_db":"20 * log(distance + 1)"}
+      outcomes: [{"when":"distance >= 90","title":"Edge of Cell Coverage","explain":"SNR drops below QAM threshold.","severity":"fail"},{"when":"distance >= 50 && distance < 90","title":"MCS Rate Downshifted","explain":"Adaptive modulation reduces rate.","severity":"warn"},{"when":"distance < 50","title":"Maximum MCS Throughput","explain":"High SNR enables 64-QAM / 256-QAM.","severity":"info"}]
+      combos_to_try: [{"set":{"distance":20},"lesson":"Client close to AP with max MCS."}]
+    common_mistakes: []
+    quiz: []
+    exam_tags: ["diagnostic", "sample"]

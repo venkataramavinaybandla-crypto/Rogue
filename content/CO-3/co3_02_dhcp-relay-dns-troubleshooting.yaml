@@ -1,0 +1,320 @@
+part:
+  id: co3_02
+  co: CO-3
+  title: DHCP Relay, DNS Zones and Address Troubleshooting
+  order: 2
+  concept_ids:
+  - co3-dhcpv4-relay
+  - co3-dns-zones-address-troubleshooting
+  - co3-address-fault-isolation
+concepts:
+- id: co3-dhcpv4-relay
+  code: CN-CO3.2.1
+  title: DHCPv4 Address Assignment and Relay
+  session: 10
+  skilling_exp: 14
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co3-ipv4-prefix-subnetting
+  eli5: DHCP gives a device its network settings automatically. A relay helps a client reach a DHCP server that
+    is on another subnet.
+  key_points:
+  - DHCPv4 assigns configuration such as an address, subnet mask, gateway and DNS server.
+  - The client begins without a configured IPv4 address and uses broadcast discovery on its local link.
+  - A DHCP relay forwards client messages across subnet boundaries to a configured server.
+  - The relay's interface context helps the server choose the correct address pool.
+  - The skilling experiment requires diagnosing a client that fails to obtain an IP address.
+  deep_dive: 'DHCPv4 automates host configuration so that clients do not need manually assigned addresses. The basic
+    exchange is commonly described as Discover, Offer, Request and Acknowledgement. A client initially broadcasts
+    because it does not yet know its address or the server''s location. Broadcast traffic normally stays within
+    the local broadcast domain, so a DHCP relay is used when the server resides on another subnet. The relay receives
+    the local client message and forwards it toward the configured server, preserving information that identifies
+    the client-facing subnet. The server uses that context to select the appropriate address pool and returns configuration
+    data. Troubleshooting should proceed in stages: verify link and VLAN membership, confirm the client is issuing
+    discovery, check relay configuration and reachability, inspect the correct scope and available leases, and verify
+    the reply returns to the client. The handout''s DHCP skilling task explicitly asks for a topology-based configuration
+    and an injected failure diagnosis, so evidence should be collected at each hop rather than assuming the server
+    is at fault.'
+  formulas:
+  - id: dhcp_exchange
+    latex: DORA=Discover\rightarrow Offer\rightarrow Request\rightarrow ACK
+    vars:
+      DORA: four-message DHCPv4 lease exchange
+    example: A new client broadcasts Discover, receives Offer, sends Request and receives ACK.
+  viz:
+    type: packet_flow
+    description: Trace the DHCP exchange and observe whether a relay is needed between client and server.
+    params:
+    - name: relay_hops
+      label: Routed hops to DHCP server
+      min: 0
+      max: 8
+      step: 1
+      default: 2
+      unit: hops
+    compute:
+      forwarding_required: relay_hops > 0
+    outcomes:
+    - when: relay_hops == 0
+      title: Same broadcast domain
+      explain: A local DHCP server can hear the client's broadcast directly; a relay may not be needed.
+      severity: info
+    - when: relay_hops > 0 && relay_hops <= 4
+      title: Relay path required
+      explain: A relay must forward DHCP messages across the routed boundary and reach the server.
+      severity: info
+    - when: relay_hops > 4
+      title: Long relay path
+      explain: The relay path is unusually long; inspect routing, reachability and response handling.
+      severity: warn
+    combos_to_try:
+    - set:
+        relay_hops: 0
+      lesson: A server on the same subnet can receive the broadcast directly.
+    - set:
+        relay_hops: 1
+      lesson: A relay is needed to cross the first routed boundary.
+    - set:
+        relay_hops: 6
+      lesson: Multiple routed hops make relay reachability and return path checks important.
+  common_mistakes:
+  - Assuming DHCP broadcasts cross routers by default.
+  - Configuring the relay but forgetting the server-side scope for the client subnet.
+  - Checking only the server and not the client-facing VLAN or return path.
+  quiz:
+  - q: Which DHCP message does a client send first when it has no lease?
+    options:
+    - Offer
+    - Discover
+    - Request
+    - ACK
+    answer: 1
+    why: The client broadcasts Discover to locate a DHCP server.
+  - q: Why is a DHCP relay used?
+    options:
+    - To forward DHCP messages across subnet boundaries
+    - To encrypt DNS records
+    - To replace the default gateway
+    - To perform NAT for all traffic
+    answer: 0
+    why: A relay carries DHCP messages between the client subnet and a remote server.
+  - q: A client sends Discover but receives no Offer. Which check is especially relevant when the server is remote?
+    options:
+    - Relay configuration and server reachability
+    - TCP congestion window
+    - Ethernet CRC polynomial only
+    - TLS certificate expiry
+    answer: 0
+    why: A missing or misconfigured relay can prevent the server from receiving the client's request.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Configure a DHCP scope for a given subnet, add the relay address on the client-facing router interface,
+    then diagnose a deliberately broken relay target.
+- id: co3-dns-zones-address-troubleshooting
+  code: CN-CO3.2.2
+  title: DNS Zones and Address Troubleshooting
+  session: 10
+  skilling_exp: 14
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co3-ipv4-prefix-subnetting
+  eli5: DNS is the network's naming directory. A zone stores records that let clients find services using names
+    instead of remembering IP addresses.
+  key_points:
+  - A DNS zone is an administratively managed portion of the DNS namespace.
+  - A and AAAA records map names to IPv4 and IPv6 addresses respectively.
+  - A CNAME record aliases one name to another canonical name.
+  - A and PTR records support forward and reverse lookup respectively.
+  - Address troubleshooting should separate name-resolution failure from routing or reachability failure.
+  deep_dive: DNS zones organize authoritative data for a portion of the namespace. A resolver asks for records,
+    while an authoritative name server provides answers for the zones it serves. An A record maps a hostname to
+    IPv4, and an AAAA record maps it to IPv6. CNAME creates an alias to a canonical name; it does not directly assign
+    an address. Reverse lookup uses PTR records under the reverse-mapping namespaces. For the campus design, zone
+    definitions must agree with the address plan and the services actually deployed. Troubleshooting begins by testing
+    whether the name resolves, checking the answer and TTL, and then testing reachability to the returned address.
+    If a client cannot obtain an address, investigate DHCP; if it has an address but cannot resolve names, investigate
+    resolver configuration, zone data and delegation; if resolution succeeds but connections fail, inspect routing,
+    filtering and service state. Keeping these failure domains separate prevents a DNS symptom from being misdiagnosed
+    as a routing fault.
+  formulas:
+  - id: dns_record_choice
+    latex: 'A: name\rightarrow IPv4,\quad AAAA: name\rightarrow IPv6'
+    vars:
+      A: IPv4 address record
+      AAAA: IPv6 address record
+    example: host.campus.example A 192.0.2.25; host.campus.example AAAA 2001:db8::25.
+  viz:
+    type: packet_flow
+    description: Select the record type that corresponds to the address family being resolved.
+    params:
+    - name: address_family
+      label: Address family
+      min: 4
+      max: 6
+      step: 2
+      default: 4
+      unit: IP version
+    compute:
+      record_type: 'address_family == 4 ? 1 : 2'
+    outcomes:
+    - when: address_family == 4
+      title: IPv4 lookup
+      explain: An A record returns an IPv4 address.
+      severity: info
+    - when: address_family == 6
+      title: IPv6 lookup
+      explain: An AAAA record returns an IPv6 address.
+      severity: info
+    combos_to_try:
+    - set:
+        address_family: 4
+      lesson: Use A records for IPv4 host addresses.
+    - set:
+        address_family: 6
+      lesson: Use AAAA records for IPv6 host addresses.
+  common_mistakes:
+  - Using an A record for an IPv6 address.
+  - Confusing authoritative zone data with a recursive resolver cache.
+  - Treating successful DNS resolution as proof that the destination is reachable.
+  quiz:
+  - q: Which DNS record maps a hostname to an IPv6 address?
+    options:
+    - A
+    - AAAA
+    - PTR
+    - MX
+    answer: 1
+    why: AAAA records carry IPv6 address data.
+  - q: What is the purpose of a PTR record?
+    options:
+    - Reverse lookup from address to name
+    - Alias one hostname to another
+    - Store an IPv4 address directly
+    - Select an OSPF route
+    answer: 0
+    why: PTR records are used for reverse DNS mapping.
+  - q: A hostname resolves correctly, but the service IP cannot be reached. What should be investigated next?
+    options:
+    - Routing and service reachability
+    - Only the spelling of the hostname
+    - The DNS record type again in every case
+    - The client's DHCP Discover packet only
+    answer: 0
+    why: DNS resolution and IP reachability are separate troubleshooting stages.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Create a small campus DNS zone with A, AAAA, CNAME and PTR records. Test name resolution separately
+    from connectivity to each returned address.
+- id: co3-address-fault-isolation
+  code: CN-CO3.2.3
+  title: DHCP and Address Fault Isolation
+  session: 10
+  skilling_exp: 14
+  btl: 4
+  difficulty: 2
+  prereqs:
+  - co3-dhcpv4-relay
+  - co3-dns-zones-address-troubleshooting
+  eli5: To find an addressing problem, check the client, its local network, the relay and the server one step at
+    a time.
+  key_points:
+  - Start by checking physical/link state and VLAN membership.
+  - Inspect the client's address, mask, gateway and DNS settings.
+  - Use packet evidence to determine whether DHCP Discover, Offer, Request and ACK are present.
+  - Verify relay forwarding, server scope selection, lease availability and return routing.
+  - Document the injected fault, evidence, fix and verification result.
+  deep_dive: 'Address troubleshooting is a sequence of tests that narrows the failure domain. First confirm that
+    the client is connected to the intended access network and that its VLAN or subnet assignment is correct. Inspect
+    the client''s address configuration: an absent, self-assigned or unexpected address suggests a DHCP or local-link
+    issue, while an incorrect mask or gateway can cause off-subnet traffic to fail. Capture or inspect DHCP messages
+    to identify the last successful stage of the lease exchange. If Discover leaves the client but does not reach
+    the server, inspect the relay and routed path. If the server receives it but sends no Offer, inspect the scope,
+    exclusions and available leases. If the Offer is sent but the client never receives it, inspect the return path
+    and filtering. After fixing one cause, renew the lease and verify the resulting address, gateway, DNS settings
+    and actual reachability. This evidence-led sequence matches the handout''s injected DHCP troubleshooting exercise.'
+  formulas:
+  - id: dhcp_stage_count
+    latex: D_{complete}=4
+    vars:
+      D_complete: number of messages in the standard DORA exchange
+    example: A complete DORA exchange contains Discover, Offer, Request and ACK.
+  viz:
+    type: timeline
+    description: Model the number of completed DHCP exchange stages.
+    params:
+    - name: completed_stages
+      label: Completed DHCP stages
+      min: 0
+      max: 4
+      step: 1
+      default: 2
+      unit: stages
+    compute:
+      remaining_stages: 4-completed_stages
+    outcomes:
+    - when: completed_stages <= 1
+      title: Early exchange failure
+      explain: The client has not received an Offer; check local broadcast delivery, relay and server receipt.
+      severity: fail
+    - when: completed_stages == 2 || completed_stages == 3
+      title: Exchange incomplete
+      explain: The exchange has progressed but has not reached ACK; inspect request processing and reply delivery.
+      severity: warn
+    - when: completed_stages == 4
+      title: Lease acknowledged
+      explain: The four DORA stages completed; verify the installed configuration and reachability.
+      severity: info
+    combos_to_try:
+    - set:
+        completed_stages: 0
+      lesson: No DHCP stage completed; begin at the client and local network.
+    - set:
+        completed_stages: 2
+      lesson: An Offer exists, but the lease is not yet acknowledged.
+    - set:
+        completed_stages: 4
+      lesson: DORA completed; still verify the assigned settings.
+  common_mistakes:
+  - Assuming an ACK proves that every configured option is correct.
+  - Changing multiple network settings before collecting evidence.
+  - Stopping troubleshooting after a lease is assigned without testing reachability.
+  quiz:
+  - q: Which evidence best identifies the stage where DHCP fails?
+    options:
+    - Presence or absence of each DORA message
+    - The browser theme
+    - The DNS zone serial alone
+    - The TCP receive window
+    answer: 0
+    why: Observing the exchange identifies the last successful DHCP stage.
+  - q: The server receives Discover but sends no Offer. Which server-side item should be checked?
+    options:
+    - The matching scope and available leases
+    - The client's TCP sequence number
+    - The OSPF hello timer only
+    - The Ethernet MTU of an unrelated link
+    answer: 0
+    why: The server must select a valid scope and have an address to offer.
+  - q: After a DHCP fix, what is the best verification?
+    options:
+    - Renew the lease and test address settings and reachability
+    - Assume the configuration is correct
+    - Only restart the DNS server
+    - Disable the relay permanently
+    answer: 0
+    why: Verification checks both the assigned configuration and practical connectivity.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Use a packet trace to identify a missing DHCP stage, write a hypothesis, perform one targeted fix,
+    then capture evidence that the lease and reachability work.

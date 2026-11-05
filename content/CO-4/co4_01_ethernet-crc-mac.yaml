@@ -1,0 +1,347 @@
+part:
+  id: co4_01
+  co: CO-4
+  title: Ethernet Frames, CRC and MAC Learning
+  order: 1
+  concept_ids:
+  - co4-ethernet-frame-fields
+  - co4-crc-gf2
+  - co4-mac-learning
+concepts:
+- id: co4-ethernet-frame-fields
+  code: CN-CO4.01.1
+  title: Ethernet Frame Structure and FCS
+  session: 13
+  skilling_exp: 17
+  btl: 2
+  difficulty: 1
+  prereqs: []
+  eli5: An Ethernet frame is a labelled package on a local network. Its addresses identify endpoints, while its
+    FCS helps detect accidental corruption.
+  key_points:
+  - A frame carries destination and source MAC addresses, a type/length field, payload and Frame Check Sequence.
+  - The FCS is an error-detection value, not error correction or authentication.
+  - The receiver recomputes the check value and compares it with the received FCS.
+  - A passing FCS does not prove that the payload is meaningful or trusted.
+  - Frame size and MTU constraints affect how upper-layer data is carried.
+  deep_dive: 'Ethernet Frame Structure and FCS is part of Ethernet Frames, CRC and MAC Learning in CO-4, whose focus
+    is to analyze link- and physical-layer behaviour and diagnose faults that may not produce an explicit error
+    message. The central idea is to connect the protocol mechanism to observable network behaviour rather than memorise
+    a definition. In a practical investigation, first state the expected behaviour, identify the relevant frame,
+    link, signal or airtime measurement, and record a baseline before changing configuration. Then vary one factor
+    at a time and compare the result with the expected model. The formula supplied with this concept is a compact
+    engineering model: identify each variable, keep units consistent, substitute measured or stated values, and
+    explain what the result does and does not prove. The visualization is intended for controlled exploration; it
+    simplifies real device behaviour and is not a complete simulator of vendor-specific implementations. When diagnosing
+    a fault, correlate counters and packet observations at both ends of the link, check configuration symmetry,
+    and distinguish physical impairment from a Layer-2 forwarding or shared-medium problem. Finally, document the
+    evidence, the single change made, the expected impact and the verification result. This method matters because
+    a link can remain administratively up while corruption, contention, poor signal margin, loops or airtime imbalance
+    make service unusable.'
+  formulas:
+  - id: co4-ethernet-frame-fields-formula
+    latex: F_rx = F_tx
+    vars: 'F_rx: recomputed FCS; F_tx: received FCS'
+    example: If both values are 0xA1B2C3D4, the check passes; unequal values indicate detected corruption.
+  viz:
+    type: bit_grid
+    description: Explore the main variables associated with ethernet frame structure and fcs and compare the simplified
+      model with a measured network result.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified visualization.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying network condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Start with a baseline where Input A is twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed outcome.
+  common_mistakes:
+  - Treating FCS as encryption or authentication.
+  - Assuming a passing FCS proves application correctness.
+  - Confusing Ethernet frame size with IP MTU.
+  quiz:
+  - q: What is the main purpose of Ethernet Frame Structure and FCS?
+    options:
+    - To understand or operate ethernet frame structure and fcs
+    - To encrypt all application data
+    - To replace IP routing
+    - To guarantee zero packet loss
+    answer: 0
+    why: This concept addresses the specific link-layer or physical-layer mechanism named in the question.
+  - q: Which diagnostic approach is most reliable for a silent network fault?
+    options:
+    - Change several settings at once
+    - Collect measurements, test one hypothesis and verify the result
+    - Assume link-up proves service health
+    - Ignore counters and rely only on user reports
+    answer: 1
+    why: A falsifiable hypothesis and controlled test isolate causes while preserving evidence.
+  - q: Which statement best describes a simplified engineering model?
+    options:
+    - It reproduces every vendor implementation exactly
+    - It removes the need for packet captures
+    - It explains selected relationships but must be checked against measurements
+    - It proves every fault has one cause
+    answer: 2
+    why: Models clarify relationships, but real devices and environments must still be measured.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small test or calculation for ethernet frame structure and fcs; record the expected result,
+    observed evidence, one controlled change and a verification result.
+- id: co4-crc-gf2
+  code: CN-CO4.01.2
+  title: CRC Error Detection over GF(2)
+  session: 13
+  skilling_exp: 17
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co4-ethernet-frame-fields
+  eli5: CRC treats a bit string like a polynomial with coefficients zero or one. The sender divides by an agreed
+    generator and attaches the remainder.
+  key_points:
+  - CRC arithmetic is performed over GF(2), where addition and subtraction are XOR.
+  - The generator polynomial defines the shared check procedure.
+  - The sender appends zeros, performs polynomial division and attaches the remainder.
+  - The receiver checks the codeword using the same generator.
+  - Detection strength depends on the generator and error pattern; CRC does not repair bits.
+  deep_dive: 'CRC Error Detection over GF(2) is part of Ethernet Frames, CRC and MAC Learning in CO-4, whose focus
+    is to analyze link- and physical-layer behaviour and diagnose faults that may not produce an explicit error
+    message. The central idea is to connect the protocol mechanism to observable network behaviour rather than memorise
+    a definition. In a practical investigation, first state the expected behaviour, identify the relevant frame,
+    link, signal or airtime measurement, and record a baseline before changing configuration. Then vary one factor
+    at a time and compare the result with the expected model. The formula supplied with this concept is a compact
+    engineering model: identify each variable, keep units consistent, substitute measured or stated values, and
+    explain what the result does and does not prove. The visualization is intended for controlled exploration; it
+    simplifies real device behaviour and is not a complete simulator of vendor-specific implementations. When diagnosing
+    a fault, correlate counters and packet observations at both ends of the link, check configuration symmetry,
+    and distinguish physical impairment from a Layer-2 forwarding or shared-medium problem. Finally, document the
+    evidence, the single change made, the expected impact and the verification result. This method matters because
+    a link can remain administratively up while corruption, contention, poor signal margin, loops or airtime imbalance
+    make service unusable.'
+  formulas:
+  - id: co4-crc-gf2-formula
+    latex: R(x) = M(x)x^r mod G(x)
+    vars: 'M(x): message polynomial; r: generator degree; G(x): generator; R(x): remainder'
+    example: For M(x)=x^3+x+1 and G(x)=x^2+1, multiply M by x^2 and divide over GF(2); the remainder forms the CRC
+      field.
+  viz:
+    type: bit_grid
+    description: Explore the main variables associated with crc error detection over gf(2) and compare the simplified
+      model with a measured network result.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified visualization.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying network condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Start with a baseline where Input A is twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed outcome.
+  common_mistakes:
+  - Using ordinary integer arithmetic instead of XOR operations.
+  - Forgetting to append the generator-degree number of zeros.
+  - Claiming every possible error pattern is guaranteed to be detected.
+  quiz:
+  - q: What is the main purpose of CRC Error Detection over GF(2)?
+    options:
+    - To understand or operate crc error detection over gf(2)
+    - To encrypt all application data
+    - To replace IP routing
+    - To guarantee zero packet loss
+    answer: 0
+    why: This concept addresses the specific link-layer or physical-layer mechanism named in the question.
+  - q: Which diagnostic approach is most reliable for a silent network fault?
+    options:
+    - Change several settings at once
+    - Collect measurements, test one hypothesis and verify the result
+    - Assume link-up proves service health
+    - Ignore counters and rely only on user reports
+    answer: 1
+    why: A falsifiable hypothesis and controlled test isolate causes while preserving evidence.
+  - q: Which statement best describes a simplified engineering model?
+    options:
+    - It reproduces every vendor implementation exactly
+    - It removes the need for packet captures
+    - It explains selected relationships but must be checked against measurements
+    - It proves every fault has one cause
+    answer: 2
+    why: Models clarify relationships, but real devices and environments must still be measured.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small test or calculation for crc error detection over gf(2); record the expected result, observed
+    evidence, one controlled change and a verification result.
+- id: co4-mac-learning
+  code: CN-CO4.01.3
+  title: MAC Addressing and Switch Learning
+  session: 13
+  skilling_exp: 17
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co4-ethernet-frame-fields
+  eli5: A switch learns which device is reachable through each port by remembering the source MAC address of frames
+    it receives.
+  key_points:
+  - A switch learns source MAC-to-port mappings from incoming frames.
+  - Known unicast frames are forwarded toward the learned destination port.
+  - Unknown unicast and broadcast traffic may be flooded within the VLAN.
+  - Entries age out so stale mappings do not remain forever.
+  - A MAC table is scoped by VLAN and can change when devices move.
+  deep_dive: 'MAC Addressing and Switch Learning is part of Ethernet Frames, CRC and MAC Learning in CO-4, whose
+    focus is to analyze link- and physical-layer behaviour and diagnose faults that may not produce an explicit
+    error message. The central idea is to connect the protocol mechanism to observable network behaviour rather
+    than memorise a definition. In a practical investigation, first state the expected behaviour, identify the relevant
+    frame, link, signal or airtime measurement, and record a baseline before changing configuration. Then vary one
+    factor at a time and compare the result with the expected model. The formula supplied with this concept is a
+    compact engineering model: identify each variable, keep units consistent, substitute measured or stated values,
+    and explain what the result does and does not prove. The visualization is intended for controlled exploration;
+    it simplifies real device behaviour and is not a complete simulator of vendor-specific implementations. When
+    diagnosing a fault, correlate counters and packet observations at both ends of the link, check configuration
+    symmetry, and distinguish physical impairment from a Layer-2 forwarding or shared-medium problem. Finally, document
+    the evidence, the single change made, the expected impact and the verification result. This method matters because
+    a link can remain administratively up while corruption, contention, poor signal margin, loops or airtime imbalance
+    make service unusable.'
+  formulas:
+  - id: co4-mac-learning-formula
+    latex: (VLAN, MAC_src) -> Port_in
+    vars: 'VLAN: identifier; MAC_src: observed source; Port_in: ingress port'
+    example: A frame arriving on port 4 in VLAN 20 with source MAC 00:11:22:33:44:55 refreshes that MAC-to-port
+      mapping.
+  viz:
+    type: topology_graph
+    description: Explore the main variables associated with mac addressing and switch learning and compare the simplified
+      model with a measured network result.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified visualization.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying network condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Start with a baseline where Input A is twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed outcome.
+  common_mistakes:
+  - Thinking switches learn from destination rather than source addresses.
+  - Ignoring VLAN context in a MAC table.
+  - Assuming switches flood every known unicast frame.
+  quiz:
+  - q: What is the main purpose of MAC Addressing and Switch Learning?
+    options:
+    - To understand or operate mac addressing and switch learning
+    - To encrypt all application data
+    - To replace IP routing
+    - To guarantee zero packet loss
+    answer: 0
+    why: This concept addresses the specific link-layer or physical-layer mechanism named in the question.
+  - q: Which diagnostic approach is most reliable for a silent network fault?
+    options:
+    - Change several settings at once
+    - Collect measurements, test one hypothesis and verify the result
+    - Assume link-up proves service health
+    - Ignore counters and rely only on user reports
+    answer: 1
+    why: A falsifiable hypothesis and controlled test isolate causes while preserving evidence.
+  - q: Which statement best describes a simplified engineering model?
+    options:
+    - It reproduces every vendor implementation exactly
+    - It removes the need for packet captures
+    - It explains selected relationships but must be checked against measurements
+    - It proves every fault has one cause
+    answer: 2
+    why: Models clarify relationships, but real devices and environments must still be measured.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small test or calculation for mac addressing and switch learning; record the expected result,
+    observed evidence, one controlled change and a verification result.

@@ -1,0 +1,326 @@
+part:
+  id: co3_01
+  co: CO-3
+  title: 'Address Planning: IPv4, VLSM and IPv6'
+  order: 1
+  concept_ids:
+  - co3-ipv4-prefix-subnetting
+  - co3-vlsm-address-plan
+  - co3-route-summarisation-ipv6
+concepts:
+- id: co3-ipv4-prefix-subnetting
+  code: CN-CO3.1.1
+  title: IPv4 Prefix Arithmetic and Subnetting
+  session: 9
+  skilling_exp: 13
+  btl: 3
+  difficulty: 2
+  prereqs: []
+  eli5: An IPv4 address has 32 bits. A prefix tells us how many leading bits identify the network; the remaining
+    bits identify addresses inside that network.
+  key_points:
+  - IPv4 addresses contain 32 bits, conventionally written as four decimal octets.
+  - A /p prefix fixes p network bits and leaves 32-p host bits.
+  - A subnet mask has p leading one-bits followed by zero-bits.
+  - The subnet address is obtained by ANDing the address with the mask.
+  - For an ordinary subnet, the number of addresses is 2^(32-p); usable-host conventions depend on subnet type.
+  deep_dive: Prefix arithmetic turns an address into a network boundary and a host range. In a /p network, the first
+    p bits are shared by every address in that subnet. The remaining 32-p bits vary, so the block contains 2^(32-p)
+    addresses. To find the network address, apply a bitwise AND between the IPv4 address and its subnet mask. The
+    final address in the block is the broadcast address for conventional IPv4 subnets, while addresses between the
+    network and broadcast boundaries are ordinarily assignable to hosts. For example, a /26 leaves six host bits
+    and therefore creates a block of 64 addresses. Prefixes are more precise than informal classful labels and are
+    the basis for subnetting, route aggregation and longest-prefix matching. When designing a real address plan,
+    reserve capacity for gateways, infrastructure and expected growth rather than allocating only the current host
+    count.
+  formulas:
+  - id: ipv4_block_size
+    latex: B=2^{32-p}
+    vars:
+      B: number of IPv4 addresses in the prefix block
+      p: prefix length in bits
+    example: For /26, B = 2^(32-26) = 64 addresses.
+  viz:
+    type: subnet_tree
+    description: Change the prefix length to see how the address block shrinks as more bits are reserved for the
+      network.
+    params:
+    - name: prefix
+      label: IPv4 prefix length
+      min: 8
+      max: 30
+      step: 1
+      default: 26
+      unit: bits
+    compute:
+      block_size: pow(2,32-prefix)
+    outcomes:
+    - when: prefix <= 16
+      title: Large address block
+      explain: A short prefix leaves many host bits and creates a large IPv4 block.
+      severity: info
+    - when: prefix > 16 && prefix <= 26
+      title: Common subnet scale
+      explain: The block is smaller and may suit a department or campus segment, subject to host demand.
+      severity: info
+    - when: prefix > 26
+      title: Small address block
+      explain: Only a small number of addresses remain; check infrastructure and growth requirements.
+      severity: warn
+    combos_to_try:
+    - set:
+        prefix: 24
+      lesson: A /24 contains 256 addresses; compare it with the /26 block.
+    - set:
+        prefix: 26
+      lesson: A /26 contains 64 addresses.
+    - set:
+        prefix: 29
+      lesson: A /29 is a small block; check whether the usable host count is sufficient.
+  common_mistakes:
+  - Confusing the prefix length with the number of host bits.
+  - Counting all block addresses as assignable host addresses.
+  - Using decimal octet intuition instead of binary boundaries.
+  quiz:
+  - q: How many address bits remain for hosts in an IPv4 /27 prefix?
+    options:
+    - '5'
+    - '27'
+    - '32'
+    - '64'
+    answer: 0
+    why: 32 total bits minus 27 network bits leaves 5 host bits.
+  - q: How many total addresses are in a /26 block?
+    options:
+    - '26'
+    - '32'
+    - '64'
+    - '128'
+    answer: 2
+    why: 2^(32-26) equals 64.
+  - q: Which operation identifies the network address?
+    options:
+    - Bitwise AND with the subnet mask
+    - Bitwise OR with the gateway
+    - Adding the prefix length
+    - Reversing the octets
+    answer: 0
+    why: The address AND mask clears host bits and preserves network bits.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Given 192.168.10.77/26, calculate the network address, broadcast address, total block size and conventional
+    usable-host range.
+- id: co3-vlsm-address-plan
+  code: CN-CO3.1.2
+  title: VLSM and Scalable Address Planning
+  session: 9
+  skilling_exp: 13
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co3-ipv4-prefix-subnetting
+  eli5: VLSM means giving different subnet sizes to different groups, instead of wasting the same-sized block on
+    every group.
+  key_points:
+  - Variable Length Subnet Masking allocates different prefix lengths within an address space.
+  - Each subnet must be aligned to its block boundary.
+  - Allocate larger subnets before smaller ones to reduce fragmentation.
+  - The required block must cover hosts plus network-specific reserved addresses.
+  - The handout's design target is an address plan that accommodates 60% growth.
+  deep_dive: 'VLSM allows a campus to divide one address space into subnets sized for different departments, labs,
+    servers and point-to-point links. Begin by listing the current host requirement for each segment, then add the
+    growth allowance specified by the design brief. For the CO-3 exercise, the plan must accommodate 60% growth,
+    so a segment expected to need 100 hosts should be planned for at least 160 before selecting a prefix. Choose
+    the smallest block whose address capacity satisfies the requirement, remembering that conventional IPv4 subnets
+    reserve network and broadcast addresses. Sort requirements from largest to smallest, allocate each block on
+    a valid boundary, and record the network, prefix, usable range and broadcast address. Finally, verify that no
+    two allocations overlap and that every block remains inside the parent allocation. A correct plan is not merely
+    a set of calculations: it must leave room for future segments and be understandable to the operators who will
+    troubleshoot it.'
+  formulas:
+  - id: growth_hosts
+    latex: H_{plan}=\lceil H_{current}(1+g)\rceil
+    vars:
+      H_plan: planned host requirement
+      H_current: current host requirement
+      g: growth fraction
+    example: For 100 current hosts and 60% growth, H_plan = ceil(100 × 1.6) = 160 hosts.
+  viz:
+    type: subnet_tree
+    description: Explore how a growth allowance changes the minimum planned host count.
+    params:
+    - name: growth_percent
+      label: Growth allowance
+      min: 0
+      max: 100
+      step: 5
+      default: 60
+      unit: percent
+    compute:
+      planned_hosts: ceil(100*(1+growth_percent/100))
+    outcomes:
+    - when: growth_percent < 20
+      title: Low growth allowance
+      explain: The plan adds limited headroom; verify that this matches the stated campus growth assumption.
+      severity: warn
+    - when: growth_percent >= 20 && growth_percent <= 60
+      title: Planned growth range
+      explain: The allocation includes a meaningful reserve; the handout's target is 60%.
+      severity: info
+    - when: growth_percent > 60
+      title: Growth above target
+      explain: This provides more than the stated 60% allowance and may require a larger parent block.
+      severity: info
+    combos_to_try:
+    - set:
+        growth_percent: 0
+      lesson: 'No growth reserve: the plan only covers current demand.'
+    - set:
+        growth_percent: 60
+      lesson: Matches the handout's 60% growth requirement.
+    - set:
+        growth_percent: 80
+      lesson: More headroom increases the required subnet size.
+  common_mistakes:
+  - Choosing a prefix before calculating the growth-adjusted host count.
+  - Allocating smaller blocks first and fragmenting the address space.
+  - Failing to check overlap and parent-prefix containment.
+  quiz:
+  - q: A segment has 125 current hosts. What is the planned host count with 60% growth?
+    options:
+    - '150'
+    - '175'
+    - '200'
+    - '225'
+    answer: 2
+    why: 125 × 1.6 = 200 planned hosts.
+  - q: Why are VLSM allocations commonly assigned largest-first?
+    options:
+    - To avoid fragmentation and fit large blocks first
+    - To make every subnet the same size
+    - To eliminate the need for masks
+    - To increase the number of broadcast domains
+    answer: 0
+    why: Large aligned blocks are harder to fit after smaller allocations fragment the address space.
+  - q: What must be checked after assigning VLSM subnets?
+    options:
+    - That allocations do not overlap and fit inside the parent block
+    - That every subnet has a /24 prefix
+    - That all gateways use the same address
+    - That the network has no broadcast address
+    answer: 0
+    why: Non-overlap and parent containment are essential correctness checks.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a VLSM plan for three segments with 160, 70 and 25 planned hosts. Show each prefix, network boundary,
+    usable range and remaining parent space.
+- id: co3-route-summarisation-ipv6
+  code: CN-CO3.1.3
+  title: Route Summarisation and IPv6 Addressing
+  session: 9
+  skilling_exp: 13
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co3-ipv4-prefix-subnetting
+  eli5: Route summarisation combines several nearby networks into one shorter route, while IPv6 uses 128-bit addresses
+    to provide a much larger addressing space.
+  key_points:
+  - A summary route represents multiple more-specific prefixes with one aggregate prefix.
+  - The networks must share a common leading bit pattern and fit the aggregate range.
+  - A valid summary must not accidentally attract traffic for unrelated address space.
+  - IPv6 addresses are 128 bits and use hexadecimal groups separated by colons.
+  - IPv6 supports compressed notation for consecutive zero groups; prefix lengths still identify network bits.
+  deep_dive: Route summarisation reduces the number of routing entries that routers must carry and advertise. To
+    form a summary, compare the binary network addresses and find the longest common leading sequence; that shared
+    sequence becomes the aggregate prefix. The component networks should form a contiguous, correctly aligned block.
+    An overly broad summary can attract packets for destinations that are not actually reachable, so summarisation
+    must be paired with accurate topology and discard or more-specific route handling where required. IPv6 extends
+    the address width from 32 to 128 bits and writes addresses as hexadecimal groups. Leading zeroes within a group
+    may be omitted, and one run of consecutive zero groups may be compressed using double-colon notation. IPv6 prefixes
+    use the same network-bit idea as IPv4, but the address arithmetic is wider. The CO-3 address plan should document
+    IPv4 and IPv6 allocations together so that dual-stack routing and operational troubleshooting remain consistent.
+  formulas:
+  - id: ipv6_bits
+    latex: A_{IPv6}=2^{128}
+    vars:
+      A_IPv6: number of distinct IPv6 addresses
+    example: IPv6 has 2^128 possible addresses; its address width is 128 bits.
+  viz:
+    type: bit_grid
+    description: Compare address width and summarisation depth using a prefix-length control.
+    params:
+    - name: prefix_length
+      label: Prefix length
+      min: 16
+      max: 120
+      step: 4
+      default: 64
+      unit: bits
+    compute:
+      host_bits: 128-prefix_length
+    outcomes:
+    - when: prefix_length < 48
+      title: Broad IPv6 allocation
+      explain: A short prefix leaves a very large address space and may represent an aggregate allocation.
+      severity: info
+    - when: prefix_length >= 48 && prefix_length <= 64
+      title: Common site or subnet scale
+      explain: This range is often useful for site planning and standard IPv6 LAN subnet design.
+      severity: info
+    - when: prefix_length > 64
+      title: Narrow IPv6 prefix
+      explain: A longer prefix leaves fewer interface bits; confirm the intended addressing architecture.
+      severity: warn
+    combos_to_try:
+    - set:
+        prefix_length: 48
+      lesson: A /48 leaves 80 bits after the prefix.
+    - set:
+        prefix_length: 64
+      lesson: A /64 is the familiar IPv6 LAN subnet size.
+    - set:
+        prefix_length: 96
+      lesson: A /96 is narrower and should match a deliberate design.
+  common_mistakes:
+  - Summarising networks that are not contiguous or not aligned.
+  - Using an aggregate that includes unrelated destinations.
+  - Treating IPv6 as merely IPv4 written in hexadecimal.
+  quiz:
+  - q: What determines the prefix length of an IPv4 summary route?
+    options:
+    - The longest common leading bit sequence
+    - The number of routers in the AS
+    - The default gateway's host number
+    - The TTL value
+    answer: 0
+    why: The common leading bits identify the aggregate network.
+  - q: How many bits are in an IPv6 address?
+    options:
+    - '32'
+    - '64'
+    - '96'
+    - '128'
+    answer: 3
+    why: IPv6 addresses are 128 bits wide.
+  - q: What is a risk of an overly broad summary?
+    options:
+    - It can attract traffic for unreachable destinations
+    - It always reduces latency
+    - It prevents ARP from working
+    - It converts IPv4 to IPv6
+    answer: 0
+    why: A summary that covers unrelated destinations can create a black hole.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Summarise four contiguous /26 networks into the smallest valid aggregate, and write an IPv6 /64 allocation
+    alongside the IPv4 plan.

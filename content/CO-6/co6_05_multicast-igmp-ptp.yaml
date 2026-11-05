@@ -1,0 +1,343 @@
+part:
+  id: co6_05
+  co: CO-6
+  title: Multicast, Group Management and PTP
+  order: 5
+  concept_ids:
+  - co6-multicast-basics
+  - co6-igmp-group-management
+  - co6-ptp-synchronization
+concepts:
+- id: co6-multicast-basics
+  code: CN-CO6.05.1
+  title: Multicast Communication and Group Delivery
+  session: 23
+  skilling_exp: 24
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co6-diffserv-marking
+  eli5: Multicast allows one sender to deliver traffic to a group of receivers without sending a separate independent
+    copy across every shared network segment. Network devices replicate traffic where paths branch.
+  key_points:
+  - Multicast uses group addressing to identify receivers of a stream.
+  - Receivers join or leave a multicast group as their interest changes.
+  - Routers and switches need multicast-aware forwarding behaviour.
+  - Multicast can reduce duplicated traffic on shared links.
+  - Validate group reachability and forwarding state across the path.
+  deep_dive: Multicast Communication and Group Delivery is part of CO-6, Predictability — Real-time, Multicast and
+    QoS. The purpose of this topic is to make network performance measurable and defensible for time-sensitive communication.
+    Begin by defining the traffic, endpoints, path and service target. Keep delay, delay variation, loss, bandwidth
+    and clock error as distinct quantities; they affect applications in different ways and should not be collapsed
+    into one vague quality score. The formula in this concept is a simplified model for organizing a calculation.
+    Identify every variable, retain its units and state assumptions before using it. The worked example demonstrates
+    the arithmetic, but a production result must use measurements from the actual path and traffic profile. Use
+    the visualization to explore how changing one input affects the simplified relationship, then compare that result
+    with packet captures, counters or device measurements. For the course integration task, every component contribution
+    should be named, measured and totalled. Evaluate the system under sustained contention rather than only during
+    an idle period, and report p50 and p99 values against explicit targets. The result should include enough evidence
+    for another engineer to reproduce the measurement and defend the conclusion.
+  formulas:
+  - id: co6-multicast-basics-formula
+    latex: R_shared ≈ R_stream * branches
+    vars: 'R_shared: aggregate stream replication across branching points; R_stream: stream rate; branches: replication
+      count'
+    example: A 2 Mbit/s stream replicated to three outgoing branches creates 6 Mbit/s of outgoing link traffic across
+      those branches in total.
+  viz:
+    type: topology_graph
+    description: Explore multicast communication and group delivery by changing the measured value and reference,
+      then interpret the result against the stated performance objective.
+    params:
+    - name: input_a
+      label: Measured value
+      min: 1
+      max: 100
+      step: 1
+      default: 30
+      unit: units
+    - name: input_b
+      label: Target or reference
+      min: 1
+      max: 100
+      step: 1
+      default: 40
+      unit: units
+    compute:
+      difference: input_b - input_a
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a <= input_b
+      title: Measured value is within reference
+      explain: The selected value does not exceed the reference in this simplified comparison.
+      severity: info
+    - when: input_a > input_b
+      title: Measured value exceeds reference
+      explain: The selected value exceeds the reference; inspect the relevant budget or operating condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 30
+        input_b: 40
+      lesson: Start with a measured value below or within the reference.
+    - set:
+        input_a: 75
+        input_b: 40
+      lesson: Increase the measured value beyond the reference and explain the operational consequence.
+  common_mistakes:
+  - Assuming multicast is automatically enabled end to end.
+  - Confusing a multicast group address with a receiver address.
+  - Ignoring where replication occurs.
+  quiz:
+  - q: What is the main engineering concern in multicast communication and group delivery?
+    options:
+    - Measure and manage the performance behaviour described by multicast communication and group delivery
+    - Assume every packet has identical delay
+    - Replace all network protocols with one mechanism
+    - Optimize only the peak throughput
+    answer: 0
+    why: The topic focuses on making the named performance behaviour measurable and controllable.
+  - q: Why should performance be evaluated under sustained contention?
+    options:
+    - It removes the need for measurement
+    - It reveals queueing and tail behaviour that may not appear on an idle path
+    - It guarantees every packet will be delayed equally
+    - It makes clock synchronization unnecessary
+    answer: 1
+    why: Load exposes resource contention and tail effects that quiet-period tests can hide.
+  - q: Which evidence makes a performance claim defensible?
+    options:
+    - A single best-case ping
+    - A screenshot of a dashboard without context
+    - Named path components, a documented method, measured results and stated targets
+    - An estimate based only on the configured link speed
+    answer: 2
+    why: A reproducible claim requires explicit measurements, method and acceptance criteria.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small measurement or calculation exercise for multicast communication and group delivery. State
+    the traffic conditions and target, record the result, and explain whether the result meets the target.
+- id: co6-igmp-group-management
+  code: CN-CO6.05.2
+  title: IGMP and Multicast Group Management
+  session: 23
+  skilling_exp: 24
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co6-multicast-basics
+  eli5: IGMP is used by IPv4 hosts to communicate multicast group membership to nearby routers. Group membership
+    information helps the network decide where multicast traffic is needed.
+  key_points:
+  - Hosts use IGMP messages to report interest in multicast groups.
+  - Routers maintain membership information for downstream networks.
+  - IGMP snooping allows switches to constrain multicast forwarding to interested ports.
+  - Membership state changes as hosts join, leave or time out.
+  - Troubleshoot group membership and forwarding tables together.
+  deep_dive: IGMP and Multicast Group Management is part of CO-6, Predictability — Real-time, Multicast and QoS.
+    The purpose of this topic is to make network performance measurable and defensible for time-sensitive communication.
+    Begin by defining the traffic, endpoints, path and service target. Keep delay, delay variation, loss, bandwidth
+    and clock error as distinct quantities; they affect applications in different ways and should not be collapsed
+    into one vague quality score. The formula in this concept is a simplified model for organizing a calculation.
+    Identify every variable, retain its units and state assumptions before using it. The worked example demonstrates
+    the arithmetic, but a production result must use measurements from the actual path and traffic profile. Use
+    the visualization to explore how changing one input affects the simplified relationship, then compare that result
+    with packet captures, counters or device measurements. For the course integration task, every component contribution
+    should be named, measured and totalled. Evaluate the system under sustained contention rather than only during
+    an idle period, and report p50 and p99 values against explicit targets. The result should include enough evidence
+    for another engineer to reproduce the measurement and defend the conclusion.
+  formulas:
+  - id: co6-igmp-group-management-formula
+    latex: G_members = count(active memberships)
+    vars: 'G_members: active membership count; active membership: a valid receiver-group subscription'
+    example: If 12 hosts have active membership in one group, the network should have membership state reflecting
+      those receivers or their attached segment.
+  viz:
+    type: state_machine
+    description: Explore igmp and multicast group management by changing the measured value and reference, then
+      interpret the result against the stated performance objective.
+    params:
+    - name: input_a
+      label: Measured value
+      min: 1
+      max: 100
+      step: 1
+      default: 30
+      unit: units
+    - name: input_b
+      label: Target or reference
+      min: 1
+      max: 100
+      step: 1
+      default: 40
+      unit: units
+    compute:
+      difference: input_b - input_a
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a <= input_b
+      title: Measured value is within reference
+      explain: The selected value does not exceed the reference in this simplified comparison.
+      severity: info
+    - when: input_a > input_b
+      title: Measured value exceeds reference
+      explain: The selected value exceeds the reference; inspect the relevant budget or operating condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 30
+        input_b: 40
+      lesson: Start with a measured value below or within the reference.
+    - set:
+        input_a: 75
+        input_b: 40
+      lesson: Increase the measured value beyond the reference and explain the operational consequence.
+  common_mistakes:
+  - Assuming IGMP alone builds every multicast routing path.
+  - Ignoring snooping state on switches.
+  - Treating stale membership as proof that a receiver is still active.
+  quiz:
+  - q: What is the main engineering concern in igmp and multicast group management?
+    options:
+    - Measure and manage the performance behaviour described by igmp and multicast group management
+    - Assume every packet has identical delay
+    - Replace all network protocols with one mechanism
+    - Optimize only the peak throughput
+    answer: 0
+    why: The topic focuses on making the named performance behaviour measurable and controllable.
+  - q: Why should performance be evaluated under sustained contention?
+    options:
+    - It removes the need for measurement
+    - It reveals queueing and tail behaviour that may not appear on an idle path
+    - It guarantees every packet will be delayed equally
+    - It makes clock synchronization unnecessary
+    answer: 1
+    why: Load exposes resource contention and tail effects that quiet-period tests can hide.
+  - q: Which evidence makes a performance claim defensible?
+    options:
+    - A single best-case ping
+    - A screenshot of a dashboard without context
+    - Named path components, a documented method, measured results and stated targets
+    - An estimate based only on the configured link speed
+    answer: 2
+    why: A reproducible claim requires explicit measurements, method and acceptance criteria.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small measurement or calculation exercise for igmp and multicast group management. State the
+    traffic conditions and target, record the result, and explain whether the result meets the target.
+- id: co6-ptp-synchronization
+  code: CN-CO6.05.3
+  title: PTP Clock Synchronization
+  session: 23
+  skilling_exp: 24
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co6-latency-components
+  eli5: Precision Time Protocol helps devices synchronize their clocks. Accurate time matters when measuring one-way
+    delay, coordinating time-sensitive systems and comparing events across network devices.
+  key_points:
+  - PTP exchanges timing messages between clock roles.
+  - A grandmaster clock provides the reference time for a PTP domain.
+  - Path delay and asymmetry affect synchronization accuracy.
+  - Hardware timestamping can improve precision where supported.
+  - Measure clock offset and stability rather than assuming synchronization is correct.
+  deep_dive: PTP Clock Synchronization is part of CO-6, Predictability — Real-time, Multicast and QoS. The purpose
+    of this topic is to make network performance measurable and defensible for time-sensitive communication. Begin
+    by defining the traffic, endpoints, path and service target. Keep delay, delay variation, loss, bandwidth and
+    clock error as distinct quantities; they affect applications in different ways and should not be collapsed into
+    one vague quality score. The formula in this concept is a simplified model for organizing a calculation. Identify
+    every variable, retain its units and state assumptions before using it. The worked example demonstrates the
+    arithmetic, but a production result must use measurements from the actual path and traffic profile. Use the
+    visualization to explore how changing one input affects the simplified relationship, then compare that result
+    with packet captures, counters or device measurements. For the course integration task, every component contribution
+    should be named, measured and totalled. Evaluate the system under sustained contention rather than only during
+    an idle period, and report p50 and p99 values against explicit targets. The result should include enough evidence
+    for another engineer to reproduce the measurement and defend the conclusion.
+  formulas:
+  - id: co6-ptp-synchronization-formula
+    latex: offset = T_slave - T_master
+    vars: 'offset: clock difference; T_slave: slave clock reading; T_master: reference clock reading'
+    example: If the slave reads 10:00:00.004 and the master reads 10:00:00.001, the slave is 3 ms ahead.
+  viz:
+    type: timeline
+    description: Explore ptp clock synchronization by changing the measured value and reference, then interpret
+      the result against the stated performance objective.
+    params:
+    - name: input_a
+      label: Measured value
+      min: 1
+      max: 100
+      step: 1
+      default: 30
+      unit: units
+    - name: input_b
+      label: Target or reference
+      min: 1
+      max: 100
+      step: 1
+      default: 40
+      unit: units
+    compute:
+      difference: input_b - input_a
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a <= input_b
+      title: Measured value is within reference
+      explain: The selected value does not exceed the reference in this simplified comparison.
+      severity: info
+    - when: input_a > input_b
+      title: Measured value exceeds reference
+      explain: The selected value exceeds the reference; inspect the relevant budget or operating condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 30
+        input_b: 40
+      lesson: Start with a measured value below or within the reference.
+    - set:
+        input_a: 75
+        input_b: 40
+      lesson: Increase the measured value beyond the reference and explain the operational consequence.
+  common_mistakes:
+  - Using unsynchronized clocks to calculate one-way delay.
+  - Ignoring path asymmetry and timestamp placement.
+  - Assuming PTP configuration alone proves accurate synchronization.
+  quiz:
+  - q: What is the main engineering concern in ptp clock synchronization?
+    options:
+    - Measure and manage the performance behaviour described by ptp clock synchronization
+    - Assume every packet has identical delay
+    - Replace all network protocols with one mechanism
+    - Optimize only the peak throughput
+    answer: 0
+    why: The topic focuses on making the named performance behaviour measurable and controllable.
+  - q: Why should performance be evaluated under sustained contention?
+    options:
+    - It removes the need for measurement
+    - It reveals queueing and tail behaviour that may not appear on an idle path
+    - It guarantees every packet will be delayed equally
+    - It makes clock synchronization unnecessary
+    answer: 1
+    why: Load exposes resource contention and tail effects that quiet-period tests can hide.
+  - q: Which evidence makes a performance claim defensible?
+    options:
+    - A single best-case ping
+    - A screenshot of a dashboard without context
+    - Named path components, a documented method, measured results and stated targets
+    - An estimate based only on the configured link speed
+    answer: 2
+    why: A reproducible claim requires explicit measurements, method and acceptance criteria.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small measurement or calculation exercise for ptp clock synchronization. State the traffic
+    conditions and target, record the result, and explain whether the result meets the target.

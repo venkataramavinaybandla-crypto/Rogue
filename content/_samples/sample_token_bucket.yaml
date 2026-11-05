@@ -1,0 +1,32 @@
+part:
+  id: sample-part-10
+  co: CO-1
+  title: Sample Token Bucket Rate Shaper Test
+  order: 109
+  concept_ids:
+    - token_bucket-sample-test
+concepts:
+  - id: token_bucket-sample-test
+    code: "TEST-TOKEN_BUCKET"
+    title: "Token Bucket Rate Shaper Test"
+    session: 1
+    skilling_exp: 1
+    btl: 3
+    difficulty: 2
+    prereqs: []
+    eli5: "Interactive verification suite for token_bucket visualizer in Rogue telemetry system."
+    key_points:
+      - "Driven strictly by params, values, outputs, outcomes contract."
+      - "Features live bidirectional interaction and animation."
+    deep_dive: "Detailed operational verification of token_bucket component under Rogue dashboard engine."
+    formulas: []
+    viz:
+      type: "token_bucket"
+      description: "Sample test suite for token_bucket"
+      params: [{"name":"capacity","label":"Burst Capacity","min":5,"max":20,"step":1,"default":10,"unit":"tokens"},{"name":"rate","label":"Fill Rate","min":1,"max":5,"step":1,"default":2,"unit":"tps"}]
+      compute: {"max_burst_kb":"capacity * 1.5"}
+      outcomes: [{"when":"capacity >= 15","title":"Large Allowed Burst","explain":"Can cause downstream buffer bloat.","severity":"warn"},{"when":"capacity < 15","title":"Smooth Traffic Shape","explain":"Maintains bounded queue occupancy.","severity":"info"}]
+      combos_to_try: [{"set":{"capacity":20,"rate":5},"lesson":"High burst allowance setting."}]
+    common_mistakes: []
+    quiz: []
+    exam_tags: ["diagnostic", "sample"]

@@ -1,0 +1,424 @@
+part:
+  id: co2-01
+  co: CO-2
+  title: Sockets and Client–Server Foundations
+  order: 1
+  concept_ids:
+  - co2-socket-programming
+  - co2-socket-system-calls
+  - co2-tcp-udp-sockets
+  - co2-client-server-architecture
+concepts:
+- id: co2-socket-programming
+  code: CN-CO2.1.1
+  title: Socket programming
+  session: 5
+  skilling_exp: 5
+  btl: 2
+  difficulty: 1
+  prereqs: []
+  eli5: Think of a socket as an endpoint that lets two programs exchange data across a network.
+  key_points:
+  - A socket is an endpoint used by an application to communicate over a transport protocol.
+  - An application chooses an address family and socket type appropriate to its communication.
+  - TCP sockets provide a connection-oriented byte stream; UDP sockets provide datagrams.
+  - A server typically creates, binds and listens on a TCP socket before accepting clients.
+  - A client creates a socket and initiates communication with a server address and port.
+  deep_dive: Socket programming gives an application a controlled interface to transport-layer communication.
+    A socket is associated with an address family, a communication type and, where relevant, a transport
+    protocol. In the course implementation context, the important distinction is between TCP stream sockets
+    and UDP datagram sockets. A TCP stream preserves byte order but does not preserve application message
+    boundaries; the application must define framing. UDP preserves datagram boundaries but does not provide
+    TCP-style connection reliability or ordering. A server commonly prepares a listening socket and waits
+    for incoming connections, while a client creates a socket and initiates a connection. The socket API
+    does not remove the need to reason about partial reads, partial writes, errors, timeouts and resource
+    cleanup. These details become central when building an HTTP server and other network programs in C.
+    Socket choice should match the required transport semantics; it does not by itself define an application
+    protocol.
+  formulas: []
+  viz:
+    type: packet_flow
+    description: Compare TCP stream and UDP datagram payload sizes.
+    params:
+    - name: payload_bytes
+      label: Payload size
+      min: 1
+      max: 65507
+      step: 1
+      default: 1200
+      unit: bytes
+    compute:
+      stream_bytes: payload_bytes
+      datagram_bytes: payload_bytes
+    outcomes:
+    - when: payload_bytes <= 1200
+      title: Typical illustrative payload
+      explain: The selected payload is within the example's 1200-byte comparison point.
+      severity: info
+    - when: payload_bytes > 1200 && payload_bytes <= 1472
+      title: Larger datagram example
+      explain: The payload is above the illustrative 1200-byte point; actual safe UDP payload depends
+        on path MTU and headers.
+      severity: warn
+    - when: payload_bytes > 1472
+      title: Fragmentation risk illustration
+      explain: A 1472-byte IPv4 UDP payload is a common Ethernet-MTU example, not a universal limit.
+      severity: fail
+    combos_to_try:
+    - set:
+        payload_bytes: 512
+      lesson: A small payload illustrates the byte-stream/datagram distinction without approaching the
+        example MTU.
+    - set:
+        payload_bytes: 1400
+      lesson: A payload near the common Ethernet example makes path-MTU assumptions visible.
+    - set:
+        payload_bytes: 2000
+      lesson: A larger datagram highlights why fragmentation and path MTU matter.
+  common_mistakes:
+  - A TCP socket is not a message-oriented protocol.
+  - UDP does not guarantee delivery or ordering.
+  - Choosing TCP or UDP is an application requirement, not a performance shortcut.
+  quiz:
+  - q: 'Which socket type provides a reliable, ordered byte stream? '
+    options:
+    - TCP stream socket
+    - UDP datagram socket
+    - Raw file socket
+    - DNS socket
+    answer: 0
+    why: TCP provides a reliable, ordered byte stream.
+  - q: 'Which transport preserves datagram boundaries? '
+    options:
+    - TCP
+    - UDP
+    - Both always
+    - Neither
+    answer: 1
+    why: UDP delivers datagrams as distinct messages.
+  - q: 'Does TCP preserve application write boundaries? '
+    options:
+    - Yes, always
+    - 'No'
+    - Only for small writes
+    - Only on localhost
+    answer: 1
+    why: TCP is a byte stream; applications must implement framing.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Implement a small C client/server pair and explain why a single recv call cannot be assumed
+    to return one complete application message.
+- id: co2-socket-system-calls
+  code: CN-CO2.1.2
+  title: Socket system calls
+  session: 5
+  skilling_exp: 5
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co2-socket-programming
+  eli5: System calls are the steps a program uses to create, prepare and communicate through a socket.
+  key_points:
+  - socket() creates a socket descriptor.
+  - bind() associates a local address and port with a socket.
+  - listen() marks a TCP socket as passive and establishes a connection queue.
+  - accept() returns a new connected descriptor for a client.
+  - connect() initiates a client-side connection; send()/recv() or read()/write() exchange bytes.
+  - close() releases a descriptor; errors must be checked at every stage.
+  deep_dive: 'In a typical TCP server, socket() creates the descriptor, setsockopt() may configure options,
+    bind() selects the local address and port, and listen() makes the socket passive. accept() then returns
+    a separate connected descriptor for each accepted client; the listening descriptor remains available
+    for new connections. A client usually calls socket() and connect(), then exchanges data using send()/recv()
+    or read()/write(). UDP programs commonly bind on the receiving side and use sendto()/recvfrom() when
+    communicating with peer addresses without a TCP connection. Every call can fail, and calls that transfer
+    data may process fewer bytes than requested. Robust C code checks return values, handles interrupted
+    or non-blocking operations as appropriate, and closes descriptors on all paths. The distinction between
+    the listening socket and connected socket is especially important when implementing a concurrent server.
+    Treat descriptors as owned resources: check each call, handle partial I/O and close descriptors when
+    finished.'
+  formulas: []
+  viz:
+    type: timeline
+    description: Illustrate the order of common TCP server and client calls.
+    params:
+    - name: clients
+      label: Concurrent clients
+      min: 1
+      max: 128
+      step: 1
+      default: 8
+      unit: clients
+    compute:
+      server_stages: '6'
+      client_stages: '4'
+      accepted_descriptors: clients
+    outcomes:
+    - when: clients <= 8
+      title: Small server exercise
+      explain: The selected client count is within the small demonstration range.
+      severity: info
+    - when: clients > 8 && clients <= 64
+      title: Growing descriptor demand
+      explain: More connected clients require deliberate descriptor and resource management.
+      severity: warn
+    - when: clients > 64
+      title: High concurrency case
+      explain: The example now represents a larger concurrency load; descriptor limits and architecture
+        matter.
+      severity: fail
+    combos_to_try:
+    - set:
+        clients: 2
+      lesson: Trace one server accept per client connection.
+    - set:
+        clients: 32
+      lesson: Consider descriptor ownership and cleanup under concurrency.
+    - set:
+        clients: 100
+      lesson: Investigate process descriptor limits and the chosen I/O model.
+  common_mistakes:
+  - accept() does not replace the listening socket.
+  - bind() and connect() have different roles.
+  - A successful send() may transfer fewer bytes than requested.
+  quiz:
+  - q: 'Which call makes a TCP socket passive and ready to accept connections? '
+    options:
+    - bind()
+    - listen()
+    - connect()
+    - recv()
+    answer: 1
+    why: listen() marks the bound TCP socket as a listening socket.
+  - q: 'What does accept() return? '
+    options:
+    - The listening descriptor
+    - A new connected descriptor
+    - A DNS record
+    - A port number
+    answer: 1
+    why: accept() returns a new descriptor for the accepted connection.
+  - q: 'Which call normally initiates a TCP client connection? '
+    options:
+    - connect()
+    - listen()
+    - accept()
+    - shutdown()
+    answer: 0
+    why: The client uses connect() to initiate the connection.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Write the server and client call sequences in C and annotate which descriptor is listening
+    and which is connected.
+- id: co2-tcp-udp-sockets
+  code: CN-CO2.1.3
+  title: TCP and UDP sockets
+  session: 5
+  skilling_exp: 5
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co2-socket-programming
+  - co2-socket-system-calls
+  eli5: TCP and UDP sockets expose different transport behaviours, so the application must choose deliberately.
+  key_points:
+  - TCP is connection-oriented and provides reliable, ordered byte delivery.
+  - UDP sends independent datagrams and does not provide TCP-style retransmission or ordering.
+  - TCP uses listen()/accept() on servers and connect() on clients.
+  - UDP commonly uses sendto()/recvfrom() to exchange datagrams.
+  - Neither protocol defines the application's message format.
+  deep_dive: 'TCP and UDP are transport choices exposed through the socket interface. TCP establishes
+    a connection and presents a reliable, ordered byte stream to the application. Reliability and ordering
+    are achieved through transport mechanisms, but application message boundaries are not retained. UDP
+    sends discrete datagrams and retains datagram boundaries, which can simplify message parsing, but
+    the application must tolerate loss, duplication or reordering if those matter. UDP does not establish
+    a TCP-style connection, although applications may use connect() on a UDP socket to set a default peer.
+    For this course, the practical comparison should focus on what the application must implement: framing
+    over TCP, and any needed reliability or sequencing over UDP. A protocol should not be selected merely
+    because one API appears shorter. The required semantics, message size, latency and failure handling
+    determine the appropriate design. TCP offers an ordered byte stream; UDP offers datagrams. Neither
+    automatically supplies application framing.'
+  formulas: []
+  viz:
+    type: bar_compare
+    description: Compare transport guarantees as a set of application responsibilities.
+    params:
+    - name: reliability_required
+      label: Reliability required
+      min: 0
+      max: 1
+      step: 1
+      default: 1
+      unit: 0=no, 1=yes
+    compute:
+      tcp_ordered: '1'
+      udp_ordered: '0'
+      udp_app_reliability: reliability_required
+    outcomes:
+    - when: reliability_required == 0
+      title: Best-effort application
+      explain: The example does not require application-level recovery for lost datagrams.
+      severity: info
+    - when: reliability_required == 1
+      title: Reliability must be considered
+      explain: TCP supplies reliable delivery; a UDP application would need its own recovery if required.
+      severity: warn
+    combos_to_try:
+    - set:
+        reliability_required: 0
+      lesson: Consider a best-effort datagram use case.
+    - set:
+        reliability_required: 1
+      lesson: Compare TCP's built-in reliability with application-level UDP recovery.
+  common_mistakes:
+  - UDP is not reliable just because recvfrom() succeeds.
+  - TCP reliability does not create message boundaries.
+  - A connected UDP socket is still UDP.
+  quiz:
+  - q: 'Which transport provides TCP-style retransmission and ordered delivery? '
+    options:
+    - UDP
+    - TCP
+    - Both equally
+    - Neither
+    answer: 1
+    why: TCP provides reliable, ordered byte-stream delivery.
+  - q: 'What is the main application framing issue with TCP? '
+    options:
+    - TCP loses all bytes
+    - TCP does not preserve write boundaries
+    - TCP changes byte order
+    - TCP requires DNS
+    answer: 1
+    why: TCP exposes a byte stream, not application messages.
+  - q: 'What does UDP preserve that TCP does not? '
+    options:
+    - Application datagram boundaries
+    - Guaranteed delivery
+    - Guaranteed ordering
+    - Congestion-free delivery
+    answer: 0
+    why: UDP datagrams remain discrete messages.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Choose TCP or UDP for two example applications and justify the choice using delivery, ordering
+    and message-boundary requirements.
+- id: co2-client-server-architecture
+  code: CN-CO2.1.4
+  title: Client–server architecture and listen queues
+  session: 5
+  skilling_exp: 5
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co2-socket-system-calls
+  eli5: A server waits at a known address while clients initiate requests; the operating system queues
+    connection work.
+  key_points:
+  - A server binds to a local address and port and listens for TCP connections.
+  - A client identifies the server using an address and port.
+  - The listening socket is distinct from each accepted connection socket.
+  - The listen backlog controls a queue-related limit for pending connection work.
+  - A full or overloaded queue can contribute to connection delay or failure.
+  deep_dive: Client–server architecture separates the program that offers a service from programs that
+    request it. The server normally binds to a known local address and port, then listens for incoming
+    TCP connection attempts. A client resolves or otherwise obtains the server address and connects to
+    that endpoint. Once a connection is accepted, the server communicates through the newly returned connected
+    descriptor, not through the listening descriptor. The listen backlog is a queue-related parameter
+    that influences how much connection work can wait to be accepted; exact queue behaviour and limits
+    depend on the operating system. A small backlog or a server that accepts too slowly can make bursts
+    of connection attempts difficult to handle. The course's socket walkthrough and backlog experiment
+    should therefore connect the API call sequence with observable queueing behaviour, rather than treating
+    backlog as a universal count of all clients. Backlog is an operating-system queue setting, not a guarantee
+    that exactly that many clients can be served.
+  formulas: []
+  viz:
+    type: queue_curve
+    description: Explore how arrival pressure compares with the server's accept rate.
+    params:
+    - name: arrival_rate
+      label: Connection arrival rate
+      min: 1
+      max: 1000
+      step: 1
+      default: 20
+      unit: connections/s
+    - name: accept_rate
+      label: Accept processing rate
+      min: 1
+      max: 1000
+      step: 1
+      default: 30
+      unit: connections/s
+    compute:
+      pressure_ratio: arrival_rate / accept_rate
+    outcomes:
+    - when: pressure_ratio <= 0.8
+      title: Accept capacity has headroom
+      explain: The illustrative arrival rate is below the accept processing rate.
+      severity: info
+    - when: pressure_ratio > 0.8 && pressure_ratio <= 1.2
+      title: Queue pressure
+      explain: Arrival and accept rates are close; bursts can build a queue.
+      severity: warn
+    - when: pressure_ratio > 1.2
+      title: Queue growth likely
+      explain: The illustrative arrival rate exceeds the accept processing rate.
+      severity: fail
+    combos_to_try:
+    - set:
+        arrival_rate: 10
+        accept_rate: 30
+      lesson: The server has illustrative spare accept capacity.
+    - set:
+        arrival_rate: 30
+        accept_rate: 30
+      lesson: A burst can create queue pressure even when average rates match.
+    - set:
+        arrival_rate: 80
+        accept_rate: 30
+      lesson: Sustained arrivals exceed the accept rate.
+  common_mistakes:
+  - The backlog is not a measure of active application sessions.
+  - The listening descriptor is not the connected descriptor.
+  - A larger backlog does not fix a server that never accepts.
+  quiz:
+  - q: 'Which descriptor is used for data exchange after accept()? '
+    options:
+    - Listening descriptor
+    - Connected descriptor
+    - DNS descriptor
+    - Backlog descriptor
+    answer: 1
+    why: accept() returns the connected descriptor used for the client session.
+  - q: 'What does listen() configure? '
+    options:
+    - A UDP payload
+    - A TCP socket to accept connections
+    - A DNS cache
+    - An HTTP response
+    answer: 1
+    why: listen() marks a TCP socket as passive.
+  - q: 'If arrivals persistently exceed accept processing, what is likely? '
+    options:
+    - The queue can grow
+    - The server becomes UDP
+    - TCP stops ordering bytes
+    - DNS TTL becomes zero
+    answer: 0
+    why: Excess arrival pressure can build queueing delay or overflow.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Vary client connection bursts and backlog settings in a C server; record connection outcomes
+    and explain the operating-system dependence.

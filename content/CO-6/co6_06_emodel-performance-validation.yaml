@@ -1,0 +1,350 @@
+part:
+  id: co6_06
+  co: CO-6
+  title: E-Model and Integrated Network Performance
+  order: 6
+  concept_ids:
+  - co6-emodel
+  - co6-percentiles-contention
+  - co6-performance-validation-gate
+concepts:
+- id: co6-emodel
+  code: CN-CO6.06.1
+  title: E-Model and Voice Quality Assessment
+  session: 23
+  skilling_exp: 24
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co6-jitter-distributions
+  - co6-playout-buffer
+  eli5: The E-model is a planning tool used to estimate conversational voice quality from impairments such as delay
+    and loss. It helps connect network behaviour to a user-facing quality estimate.
+  key_points:
+  - The E-model combines impairment factors into a rating factor.
+  - Delay and packet loss can reduce perceived conversational quality.
+  - Codec and equipment impairment factors also influence the estimate.
+  - The model is an assessment aid and not a direct measurement of every listener's experience.
+  - Use measured network inputs and state model assumptions when reporting results.
+  deep_dive: E-Model and Voice Quality Assessment is part of CO-6, Predictability — Real-time, Multicast and QoS.
+    The purpose of this topic is to make network performance measurable and defensible for time-sensitive communication.
+    Begin by defining the traffic, endpoints, path and service target. Keep delay, delay variation, loss, bandwidth
+    and clock error as distinct quantities; they affect applications in different ways and should not be collapsed
+    into one vague quality score. The formula in this concept is a simplified model for organizing a calculation.
+    Identify every variable, retain its units and state assumptions before using it. The worked example demonstrates
+    the arithmetic, but a production result must use measurements from the actual path and traffic profile. Use
+    the visualization to explore how changing one input affects the simplified relationship, then compare that result
+    with packet captures, counters or device measurements. For the course integration task, every component contribution
+    should be named, measured and totalled. Evaluate the system under sustained contention rather than only during
+    an idle period, and report p50 and p99 values against explicit targets. The result should include enough evidence
+    for another engineer to reproduce the measurement and defend the conclusion.
+  formulas:
+  - id: co6-emodel-formula
+    latex: R = R0 - Is - Id - Ie + A
+    vars: 'R: rating factor; R0: basic signal-to-noise factor; Is: simultaneous impairments; Id: delay impairment;
+      Ie: equipment impairment; A: advantage factor'
+    example: An illustrative calculation with R0=94, Is=2, Id=8, Ie=5 and A=0 gives R=79; interpretation requires
+      the appropriate model context.
+  viz:
+    type: bar_compare
+    description: Explore e-model and voice quality assessment by changing the measured value and reference, then
+      interpret the result against the stated performance objective.
+    params:
+    - name: input_a
+      label: Measured value
+      min: 1
+      max: 100
+      step: 1
+      default: 30
+      unit: units
+    - name: input_b
+      label: Target or reference
+      min: 1
+      max: 100
+      step: 1
+      default: 40
+      unit: units
+    compute:
+      difference: input_b - input_a
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a <= input_b
+      title: Measured value is within reference
+      explain: The selected value does not exceed the reference in this simplified comparison.
+      severity: info
+    - when: input_a > input_b
+      title: Measured value exceeds reference
+      explain: The selected value exceeds the reference; inspect the relevant budget or operating condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 30
+        input_b: 40
+      lesson: Start with a measured value below or within the reference.
+    - set:
+        input_a: 75
+        input_b: 40
+      lesson: Increase the measured value beyond the reference and explain the operational consequence.
+  common_mistakes:
+  - Treating the E-model score as a direct MOS measurement.
+  - Omitting codec and equipment impairment assumptions.
+  - Using guessed delay and loss values instead of measurements.
+  quiz:
+  - q: What is the main engineering concern in e-model and voice quality assessment?
+    options:
+    - Measure and manage the performance behaviour described by e-model and voice quality assessment
+    - Assume every packet has identical delay
+    - Replace all network protocols with one mechanism
+    - Optimize only the peak throughput
+    answer: 0
+    why: The topic focuses on making the named performance behaviour measurable and controllable.
+  - q: Why should performance be evaluated under sustained contention?
+    options:
+    - It removes the need for measurement
+    - It reveals queueing and tail behaviour that may not appear on an idle path
+    - It guarantees every packet will be delayed equally
+    - It makes clock synchronization unnecessary
+    answer: 1
+    why: Load exposes resource contention and tail effects that quiet-period tests can hide.
+  - q: Which evidence makes a performance claim defensible?
+    options:
+    - A single best-case ping
+    - A screenshot of a dashboard without context
+    - Named path components, a documented method, measured results and stated targets
+    - An estimate based only on the configured link speed
+    answer: 2
+    why: A reproducible claim requires explicit measurements, method and acceptance criteria.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small measurement or calculation exercise for e-model and voice quality assessment. State the
+    traffic conditions and target, record the result, and explain whether the result meets the target.
+- id: co6-percentiles-contention
+  code: CN-CO6.06.2
+  title: p50/p99 Distributions Under Sustained Contention
+  session: 24
+  skilling_exp: 23
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co6-latency-budget
+  - co6-jitter-distributions
+  eli5: A p50 value describes the median observation, while p99 describes a high-tail value that only one percent
+    of observations exceed. Under contention, the tail can reveal problems hidden by the average.
+  key_points:
+  - Collect enough samples over a representative sustained-load period.
+  - p50 represents the median and p99 represents the 99th percentile.
+  - Compare both percentiles with stated latency and jitter targets.
+  - Record load, path, packet size and measurement method alongside the results.
+  - Identify which path component contributes to tail growth.
+  deep_dive: p50/p99 Distributions Under Sustained Contention is part of CO-6, Predictability — Real-time, Multicast
+    and QoS. The purpose of this topic is to make network performance measurable and defensible for time-sensitive
+    communication. Begin by defining the traffic, endpoints, path and service target. Keep delay, delay variation,
+    loss, bandwidth and clock error as distinct quantities; they affect applications in different ways and should
+    not be collapsed into one vague quality score. The formula in this concept is a simplified model for organizing
+    a calculation. Identify every variable, retain its units and state assumptions before using it. The worked example
+    demonstrates the arithmetic, but a production result must use measurements from the actual path and traffic
+    profile. Use the visualization to explore how changing one input affects the simplified relationship, then compare
+    that result with packet captures, counters or device measurements. For the course integration task, every component
+    contribution should be named, measured and totalled. Evaluate the system under sustained contention rather than
+    only during an idle period, and report p50 and p99 values against explicit targets. The result should include
+    enough evidence for another engineer to reproduce the measurement and defend the conclusion.
+  formulas:
+  - id: co6-percentiles-contention-formula
+    latex: p99 = percentile(D,99)
+    vars: 'D: measured delay sample distribution; percentile(D,99): value at or below which 99% of samples fall'
+    example: For 10,000 ordered delay samples, p99 is approximately around the 9,900th ordered observation, subject
+      to the percentile convention used.
+  viz:
+    type: queue_curve
+    description: Explore p50/p99 distributions under sustained contention by changing the measured value and reference,
+      then interpret the result against the stated performance objective.
+    params:
+    - name: input_a
+      label: Measured value
+      min: 1
+      max: 100
+      step: 1
+      default: 30
+      unit: units
+    - name: input_b
+      label: Target or reference
+      min: 1
+      max: 100
+      step: 1
+      default: 40
+      unit: units
+    compute:
+      difference: input_b - input_a
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a <= input_b
+      title: Measured value is within reference
+      explain: The selected value does not exceed the reference in this simplified comparison.
+      severity: info
+    - when: input_a > input_b
+      title: Measured value exceeds reference
+      explain: The selected value exceeds the reference; inspect the relevant budget or operating condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 30
+        input_b: 40
+      lesson: Start with a measured value below or within the reference.
+    - set:
+        input_a: 75
+        input_b: 40
+      lesson: Increase the measured value beyond the reference and explain the operational consequence.
+  common_mistakes:
+  - Reporting only the average or p50.
+  - Comparing percentiles from different sample windows or methods.
+  - Claiming p99 guarantees that no packet exceeds the target.
+  quiz:
+  - q: What is the main engineering concern in p50/p99 distributions under sustained contention?
+    options:
+    - Measure and manage the performance behaviour described by p50/p99 distributions under sustained contention
+    - Assume every packet has identical delay
+    - Replace all network protocols with one mechanism
+    - Optimize only the peak throughput
+    answer: 0
+    why: The topic focuses on making the named performance behaviour measurable and controllable.
+  - q: Why should performance be evaluated under sustained contention?
+    options:
+    - It removes the need for measurement
+    - It reveals queueing and tail behaviour that may not appear on an idle path
+    - It guarantees every packet will be delayed equally
+    - It makes clock synchronization unnecessary
+    answer: 1
+    why: Load exposes resource contention and tail effects that quiet-period tests can hide.
+  - q: Which evidence makes a performance claim defensible?
+    options:
+    - A single best-case ping
+    - A screenshot of a dashboard without context
+    - Named path components, a documented method, measured results and stated targets
+    - An estimate based only on the configured link speed
+    answer: 2
+    why: A reproducible claim requires explicit measurements, method and acceptance criteria.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small measurement or calculation exercise for p50/p99 distributions under sustained contention.
+    State the traffic conditions and target, record the result, and explain whether the result meets the target.
+- id: co6-performance-validation-gate
+  code: CN-CO6.06.3
+  title: Integrated Real-Time Performance Validation Gate
+  session: 24
+  skilling_exp: 23
+  btl: 5
+  difficulty: 3
+  prereqs:
+  - co6-emodel
+  - co6-percentiles-contention
+  - co6-ptp-synchronization
+  - co6-media-wire-rate
+  eli5: The final validation gate combines latency, jitter, media capacity, queue behaviour, multicast and clock
+    synchronization. A result is defensible only when every path term is named, measured and compared with a stated
+    target.
+  key_points:
+  - Define the traffic profile, endpoints, path and acceptance targets before testing.
+  - Measure component delays and total end-to-end latency.
+  - Report p50 and p99 latency and jitter under sustained contention.
+  - Verify media wire-rate allocation, queue treatment, multicast delivery and clock synchronization.
+  - Retain captures, counters, configuration and calculation steps so the result can be reproduced.
+  deep_dive: Integrated Real-Time Performance Validation Gate is part of CO-6, Predictability — Real-time, Multicast
+    and QoS. The purpose of this topic is to make network performance measurable and defensible for time-sensitive
+    communication. Begin by defining the traffic, endpoints, path and service target. Keep delay, delay variation,
+    loss, bandwidth and clock error as distinct quantities; they affect applications in different ways and should
+    not be collapsed into one vague quality score. The formula in this concept is a simplified model for organizing
+    a calculation. Identify every variable, retain its units and state assumptions before using it. The worked example
+    demonstrates the arithmetic, but a production result must use measurements from the actual path and traffic
+    profile. Use the visualization to explore how changing one input affects the simplified relationship, then compare
+    that result with packet captures, counters or device measurements. For the course integration task, every component
+    contribution should be named, measured and totalled. Evaluate the system under sustained contention rather than
+    only during an idle period, and report p50 and p99 values against explicit targets. The result should include
+    enough evidence for another engineer to reproduce the measurement and defend the conclusion.
+  formulas:
+  - id: co6-performance-validation-gate-formula
+    latex: Pass = (p50 <= T50) AND (p99 <= T99)
+    vars: 'p50/p99: measured percentiles; T50/T99: corresponding acceptance targets'
+    example: If measured p50 is 24 ms against a 30 ms target and p99 is 47 ms against a 50 ms target, both percentile
+      checks pass; other gate checks still apply.
+  viz:
+    type: timeline
+    description: Explore integrated real-time performance validation gate by changing the measured value and reference,
+      then interpret the result against the stated performance objective.
+    params:
+    - name: input_a
+      label: Measured value
+      min: 1
+      max: 100
+      step: 1
+      default: 30
+      unit: units
+    - name: input_b
+      label: Target or reference
+      min: 1
+      max: 100
+      step: 1
+      default: 40
+      unit: units
+    compute:
+      difference: input_b - input_a
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a <= input_b
+      title: Measured value is within reference
+      explain: The selected value does not exceed the reference in this simplified comparison.
+      severity: info
+    - when: input_a > input_b
+      title: Measured value exceeds reference
+      explain: The selected value exceeds the reference; inspect the relevant budget or operating condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 30
+        input_b: 40
+      lesson: Start with a measured value below or within the reference.
+    - set:
+        input_a: 75
+        input_b: 40
+      lesson: Increase the measured value beyond the reference and explain the operational consequence.
+  common_mistakes:
+  - Testing only when the network is idle.
+  - Using a single end-to-end number without component attribution.
+  - Declaring the gate passed while multicast, clock or media-capacity checks remain unverified.
+  quiz:
+  - q: What is the main engineering concern in integrated real-time performance validation gate?
+    options:
+    - Measure and manage the performance behaviour described by integrated real-time performance validation gate
+    - Assume every packet has identical delay
+    - Replace all network protocols with one mechanism
+    - Optimize only the peak throughput
+    answer: 0
+    why: The topic focuses on making the named performance behaviour measurable and controllable.
+  - q: Why should performance be evaluated under sustained contention?
+    options:
+    - It removes the need for measurement
+    - It reveals queueing and tail behaviour that may not appear on an idle path
+    - It guarantees every packet will be delayed equally
+    - It makes clock synchronization unnecessary
+    answer: 1
+    why: Load exposes resource contention and tail effects that quiet-period tests can hide.
+  - q: Which evidence makes a performance claim defensible?
+    options:
+    - A single best-case ping
+    - A screenshot of a dashboard without context
+    - Named path components, a documented method, measured results and stated targets
+    - An estimate based only on the configured link speed
+    answer: 2
+    why: A reproducible claim requires explicit measurements, method and acceptance criteria.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a small measurement or calculation exercise for integrated real-time performance validation gate.
+    State the traffic conditions and target, record the result, and explain whether the result meets the target.

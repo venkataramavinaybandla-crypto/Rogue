@@ -1,0 +1,344 @@
+part:
+  id: co5_04
+  co: CO-5
+  title: Zero Trust, VPN and MTU
+  order: 4
+  concept_ids:
+  - co5-zero-trust-identity
+  - co5-vpn-mtu
+  - co5-tunnel-overhead-diagnosis
+concepts:
+- id: co5-zero-trust-identity
+  code: CN-CO5.04.1
+  title: Edge Identity and Zero-Trust Principles
+  session: 19
+  skilling_exp: 22
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co5-acl-filtering
+  eli5: Zero trust does not assume that a device is safe just because it is inside a network. Access decisions consider
+    identity, device or session context and the requested resource.
+  key_points:
+  - Network location alone is not sufficient proof of trust.
+  - Identity and policy should be checked at the access boundary.
+  - Access should be limited to the required resource and action.
+  - Authentication establishes identity; authorization decides what that identity may do.
+  - Policies need monitoring and periodic review as users and devices change.
+  deep_dive: 'Edge Identity and Zero-Trust Principles belongs to Zero Trust, VPN and MTU in CO-5, which focuses
+    on evaluating and operating the network that has already been built. The aim is to turn an operational symptom
+    into a defensible conclusion supported by repeatable evidence. Start by defining the service behaviour that
+    is failing, the affected scope and the time interval. State a hypothesis that predicts an observable result,
+    then select a test that can distinguish it from competing explanations. Collect evidence from relevant endpoints
+    and intermediate systems, including counters, logs, traces, packet observations and configuration state. The
+    formula included with this concept is a compact model: identify every variable, preserve units, state assumptions
+    and explain the limits of the result. The visualization is a learning aid rather than a complete implementation
+    of a vendor device or production control plane. For a real change, estimate the blast radius, make one controlled
+    adjustment, retain a rollback path and repeat the original test. Verification should demonstrate service restoration
+    and check for regressions, not merely confirm that a command returned successfully. Document the hypothesis,
+    test, evidence, change and outcome so another engineer can reproduce the reasoning. This disciplined process
+    reduces guesswork and makes network operations safer, faster and easier to audit.'
+  formulas:
+  - id: co5-zero-trust-identity-formula
+    latex: Access = policy(identity, context, resource)
+    vars: 'identity: authenticated principal; context: device/session signals; resource: requested service'
+    example: A user may authenticate successfully but still be denied access to an administrative service because
+      their role does not authorize it.
+  viz:
+    type: state_machine
+    description: Explore the operational relationship behind edge identity and zero-trust principles using controlled
+      input values; compare the simplified result with measured system behaviour.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified learning model.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying operational condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Establish a baseline with Input A twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed result.
+  common_mistakes:
+  - Equating successful authentication with authorization.
+  - Treating an internal subnet as inherently trusted.
+  - Granting broad permanent access when a narrow policy is sufficient.
+  quiz:
+  - q: What is the central purpose of Edge Identity and Zero-Trust Principles?
+    options:
+    - Apply or analyze edge identity and zero-trust principles in network operations
+    - Encrypt all application traffic
+    - Replace routing protocols
+    - Guarantee that no network fault can occur
+    answer: 0
+    why: The concept supports the specific operational capability named in the question.
+  - q: Which practice best supports reliable fault resolution?
+    options:
+    - Make several changes before measuring
+    - Use a falsifiable hypothesis, controlled test and recorded evidence
+    - Assume a green dashboard proves every user path works
+    - Skip verification after a configuration change
+    answer: 1
+    why: A testable hypothesis and evidence-based workflow distinguish causes and validate the fix.
+  - q: What should happen after a risky network change?
+    options:
+    - Delete the previous configuration immediately
+    - Assume success if the command completed
+    - Verify service behaviour and retain a rollback path
+    - Avoid documenting the change
+    answer: 2
+    why: Operational success requires service-level verification and a safe recovery option.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Create a small practical exercise for edge identity and zero-trust principles. State the expected behaviour,
+    collect evidence, make one controlled change if needed, and record verification and rollback considerations.
+- id: co5-vpn-mtu
+  code: CN-CO5.04.2
+  title: VPN Encapsulation and MTU Constraints
+  session: 19
+  skilling_exp: 22
+  btl: 4
+  difficulty: 2
+  prereqs:
+  - co5-zero-trust-identity
+  eli5: A VPN adds headers around packets to carry them through a tunnel. The extra bytes reduce the room available
+    for the inner packet and can cause fragmentation or black-hole symptoms.
+  key_points:
+  - Tunnel encapsulation adds outer headers and sometimes authentication or encryption overhead.
+  - The effective inner MTU is smaller than the underlay path MTU by the encapsulation overhead.
+  - Oversized packets may fragment or be dropped when path MTU discovery fails.
+  - TCP MSS adjustment can reduce segment size but must be configured with care.
+  - Test packet sizes in both directions and include the tunnel path in the diagnosis.
+  deep_dive: 'VPN Encapsulation and MTU Constraints belongs to Zero Trust, VPN and MTU in CO-5, which focuses on
+    evaluating and operating the network that has already been built. The aim is to turn an operational symptom
+    into a defensible conclusion supported by repeatable evidence. Start by defining the service behaviour that
+    is failing, the affected scope and the time interval. State a hypothesis that predicts an observable result,
+    then select a test that can distinguish it from competing explanations. Collect evidence from relevant endpoints
+    and intermediate systems, including counters, logs, traces, packet observations and configuration state. The
+    formula included with this concept is a compact model: identify every variable, preserve units, state assumptions
+    and explain the limits of the result. The visualization is a learning aid rather than a complete implementation
+    of a vendor device or production control plane. For a real change, estimate the blast radius, make one controlled
+    adjustment, retain a rollback path and repeat the original test. Verification should demonstrate service restoration
+    and check for regressions, not merely confirm that a command returned successfully. Document the hypothesis,
+    test, evidence, change and outcome so another engineer can reproduce the reasoning. This disciplined process
+    reduces guesswork and makes network operations safer, faster and easier to audit.'
+  formulas:
+  - id: co5-vpn-mtu-formula
+    latex: MTU_inner = MTU_path - H_tunnel
+    vars: 'MTU_inner: usable inner packet size; MTU_path: underlay path MTU; H_tunnel: encapsulation overhead'
+    example: For a 1500-byte underlay MTU and 60-byte tunnel overhead, the simplified inner MTU is 1440 bytes.
+  viz:
+    type: bit_grid
+    description: Explore the operational relationship behind vpn encapsulation and mtu constraints using controlled
+      input values; compare the simplified result with measured system behaviour.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified learning model.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying operational condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Establish a baseline with Input A twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed result.
+  common_mistakes:
+  - Ignoring encryption and tunnel header overhead.
+  - Assuming all VPN traffic has the same overhead across protocols.
+  - Treating a successful small ping as proof that large packets work.
+  quiz:
+  - q: What is the central purpose of VPN Encapsulation and MTU Constraints?
+    options:
+    - Apply or analyze vpn encapsulation and mtu constraints in network operations
+    - Encrypt all application traffic
+    - Replace routing protocols
+    - Guarantee that no network fault can occur
+    answer: 0
+    why: The concept supports the specific operational capability named in the question.
+  - q: Which practice best supports reliable fault resolution?
+    options:
+    - Make several changes before measuring
+    - Use a falsifiable hypothesis, controlled test and recorded evidence
+    - Assume a green dashboard proves every user path works
+    - Skip verification after a configuration change
+    answer: 1
+    why: A testable hypothesis and evidence-based workflow distinguish causes and validate the fix.
+  - q: What should happen after a risky network change?
+    options:
+    - Delete the previous configuration immediately
+    - Assume success if the command completed
+    - Verify service behaviour and retain a rollback path
+    - Avoid documenting the change
+    answer: 2
+    why: Operational success requires service-level verification and a safe recovery option.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Create a small practical exercise for vpn encapsulation and mtu constraints. State the expected behaviour,
+    collect evidence, make one controlled change if needed, and record verification and rollback considerations.
+- id: co5-tunnel-overhead-diagnosis
+  code: CN-CO5.04.3
+  title: Tunnel Overhead and Path-MTU Diagnosis
+  session: 19
+  skilling_exp: 22
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co5-vpn-mtu
+  eli5: When small packets work but large transfers stall, tunnel overhead and path-MTU handling are useful suspects.
+    A size sweep can reveal the largest packet that passes.
+  key_points:
+  - Compare inner packet size with the underlay path MTU and tunnel overhead.
+  - Use do-not-fragment probes where supported to find size limits.
+  - Check ICMP Packet Too Big or fragmentation-needed messages along the path.
+  - A black hole can occur when required MTU feedback is filtered.
+  - Verify application behaviour after adjusting MTU or MSS.
+  deep_dive: 'Tunnel Overhead and Path-MTU Diagnosis belongs to Zero Trust, VPN and MTU in CO-5, which focuses on
+    evaluating and operating the network that has already been built. The aim is to turn an operational symptom
+    into a defensible conclusion supported by repeatable evidence. Start by defining the service behaviour that
+    is failing, the affected scope and the time interval. State a hypothesis that predicts an observable result,
+    then select a test that can distinguish it from competing explanations. Collect evidence from relevant endpoints
+    and intermediate systems, including counters, logs, traces, packet observations and configuration state. The
+    formula included with this concept is a compact model: identify every variable, preserve units, state assumptions
+    and explain the limits of the result. The visualization is a learning aid rather than a complete implementation
+    of a vendor device or production control plane. For a real change, estimate the blast radius, make one controlled
+    adjustment, retain a rollback path and repeat the original test. Verification should demonstrate service restoration
+    and check for regressions, not merely confirm that a command returned successfully. Document the hypothesis,
+    test, evidence, change and outcome so another engineer can reproduce the reasoning. This disciplined process
+    reduces guesswork and makes network operations safer, faster and easier to audit.'
+  formulas:
+  - id: co5-tunnel-overhead-diagnosis-formula
+    latex: L_inner_max = MTU_path - H_tunnel
+    vars: 'L_inner_max: maximum inner packet size in simplified model; MTU_path: path MTU; H_tunnel: overhead'
+    example: A 1500-byte path with 80 bytes of tunnel overhead gives a 1420-byte simplified inner limit.
+  viz:
+    type: timeline
+    description: Explore the operational relationship behind tunnel overhead and path-mtu diagnosis using controlled
+      input values; compare the simplified result with measured system behaviour.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified learning model.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying operational condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Establish a baseline with Input A twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed result.
+  common_mistakes:
+  - Assuming a fixed 1500-byte usable MTU inside every tunnel.
+  - Blocking all ICMP without considering path-MTU discovery.
+  - Changing MTU without checking both directions.
+  quiz:
+  - q: What is the central purpose of Tunnel Overhead and Path-MTU Diagnosis?
+    options:
+    - Apply or analyze tunnel overhead and path-mtu diagnosis in network operations
+    - Encrypt all application traffic
+    - Replace routing protocols
+    - Guarantee that no network fault can occur
+    answer: 0
+    why: The concept supports the specific operational capability named in the question.
+  - q: Which practice best supports reliable fault resolution?
+    options:
+    - Make several changes before measuring
+    - Use a falsifiable hypothesis, controlled test and recorded evidence
+    - Assume a green dashboard proves every user path works
+    - Skip verification after a configuration change
+    answer: 1
+    why: A testable hypothesis and evidence-based workflow distinguish causes and validate the fix.
+  - q: What should happen after a risky network change?
+    options:
+    - Delete the previous configuration immediately
+    - Assume success if the command completed
+    - Verify service behaviour and retain a rollback path
+    - Avoid documenting the change
+    answer: 2
+    why: Operational success requires service-level verification and a safe recovery option.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Create a small practical exercise for tunnel overhead and path-mtu diagnosis. State the expected behaviour,
+    collect evidence, make one controlled change if needed, and record verification and rollback considerations.

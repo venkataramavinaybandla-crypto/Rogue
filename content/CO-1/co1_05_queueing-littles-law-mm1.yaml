@@ -1,0 +1,535 @@
+part:
+  id: co1-part-05
+  co: CO1
+  title: Queueing Curves, Little's Law, M/M/1, and Buffers
+  order: 5
+  concept_ids:
+  - queueing-delay-curve-knee
+  - littles-law
+  - mm1-queue-model
+  - buffer-capacity-and-loss
+  - queueing-measurement
+concepts:
+- id: queueing-delay-curve-knee
+  code: CN-CO1.5.1
+  title: Queueing-Delay Curve and the Utilization Knee
+  session: 3
+  skilling_exp: 3
+  btl: 4
+  difficulty: 2
+  prereqs:
+  - link-utilization
+  - queueing-delay
+  eli5: At a quiet shop, customers wait very little. When almost every cashier is busy, even a few extra customers
+    can create a long line. Packet queues behave similarly.
+  key_points:
+  - Queueing delay often rises slowly at low utilization and sharply near saturation.
+  - The knee is the region where delay begins increasing rapidly.
+  - Bursty arrivals can cause queues even when average utilization is below 100%.
+  - The knee depends on traffic and service characteristics, not one universal fixed percentage.
+  deep_dive: The queueing-delay curve relates offered load or utilization to the time packets spend waiting for
+    service. At low utilization, the service resource has enough spare capacity to absorb ordinary variation. As
+    utilization rises, spare capacity shrinks and bursts are more likely to create a backlog. Near saturation, waiting
+    time can increase sharply; this rapid-growth region is commonly described as the knee. The exact location is
+    workload-dependent and should be identified experimentally rather than treated as a universal threshold. The
+    handout's skilling experiment explicitly asks students to identify the queueing threshold (knee), examine buffer
+    behavior, and validate Little's Law. A useful experiment gradually increases offered load while recording queue
+    depth, average delay, tail delay, and drops. Keep packet size and service rate controlled so the effect of utilization
+    is interpretable. Averages alone can hide short periods of severe congestion, so retain time-series or percentile
+    evidence.
+  formulas: []
+  viz:
+    type: queue_curve
+    description: Adjust offered load / service capacity and observe queueing-delay curve and the utilization knee
+      as the selected network condition changes.
+    params:
+    - name: utilization
+      label: Offered load / service capacity
+      min: 0
+      max: 1.2
+      step: 0.01
+      default: 0.5
+      unit: ratio
+    compute:
+      load_pct: utilization * 100
+    outcomes:
+    - when: utilization <= 0.7
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: utilization > 0.7 && utilization <= 0.9
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: utilization > 0.9
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        utilization: 0.5
+      lesson: The queue is in a lower-load region.
+    - set:
+        utilization: 0.8
+      lesson: The system is approaching the knee; observe delay more carefully.
+    - set:
+        utilization: 0.98
+      lesson: Near saturation, delay can rise steeply and drops may follow.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of queueing-delay curve and the utilization knee?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Run or simulate a load sweep from 20% to 99% utilization and plot average queueing delay to identify
+    the knee.
+- id: littles-law
+  code: CN-CO1.5.2
+  title: Little's Law
+  session: 3
+  skilling_exp: 3
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - queueing-delay-curve-knee
+  eli5: Think of a line at a shop. If 10 people arrive every minute and each spends 2 minutes in the shop, about
+    20 people are inside on average. Little's Law connects these three quantities.
+  key_points:
+  - Little's Law is L = λW for a stable system over a consistent boundary.
+  - L is average number of items in the system.
+  - λ is average arrival rate; W is average time in the system.
+  - The measurement interval and system boundary must match.
+  deep_dive: 'Little''s Law states that the long-run average number of items in a stable system equals the average
+    arrival rate multiplied by the average time an item spends in that system. In networking, the items may be packets
+    or bytes, provided the units are consistent. If arrival rate is measured in packets per second and time in seconds,
+    the result is an average packet count. The system boundary must be defined: a queue-only measurement uses waiting
+    time and queue occupancy, while a whole-system measurement includes service time and all items in the system.
+    The relationship does not require an M/M/1 model, but it does require appropriate long-run averages and a stable
+    system where the relevant averages are meaningful. In the handout''s queueing experiment, Little''s Law is to
+    be experimentally validated alongside buffer behavior. Compare the predicted average occupancy with measured
+    occupancy and investigate mismatches caused by inconsistent boundaries, transient load, packet drops, or measurement
+    errors.'
+  formulas:
+  - id: little_law
+    latex: L=\lambda W
+    vars:
+      L: average number of items in the system
+      \lambda: average arrival rate in items per second
+      W: average time in the system in seconds
+    example: At 500 packets/s and an average system time of 0.02 s, L=500×0.02=10 packets on average.
+  viz:
+    type: custom
+    description: Adjust arrival rate and observe little's law as the selected network condition changes.
+    params:
+    - name: arrival_rate
+      label: Arrival rate
+      min: 1
+      max: 2000
+      step: 1
+      default: 500
+      unit: packets/s
+    compute:
+      average_items: arrival_rate * residence_time
+    outcomes:
+    - when: arrival_rate <= 700
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: arrival_rate > 700 && arrival_rate <= 900
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: arrival_rate > 900
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        arrival_rate: 500
+      lesson: At 500 packets/s and 0.02 s residence time, average occupancy is 10 packets.
+    - set:
+        arrival_rate: 800
+      lesson: Higher arrival rate increases average occupancy if residence time is unchanged.
+    - set:
+        arrival_rate: 1500
+      lesson: A high arrival rate can produce a large average population and may destabilize the queue if service
+        is insufficient.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of little's law?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Given 500 packets/s and 20 ms average time in the system, use Little's Law to calculate average packets
+    in the system.
+- id: mm1-queue-model
+  code: CN-CO1.5.3
+  title: M/M/1 Queueing Model and Its Limits
+  session: 3
+  skilling_exp: 3
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - littles-law
+  eli5: An M/M/1 model imagines one cashier, with customers arriving randomly and service times varying randomly.
+    It is a useful simple model, but a real shop may not follow all its assumptions.
+  key_points:
+  - The first M represents a memoryless (Poisson) arrival process.
+  - The second M represents exponentially distributed service times.
+  - The 1 represents one server.
+  - The basic steady-state model requires arrival rate λ to be less than service rate μ.
+  deep_dive: The M/M/1 model is a single-server queue with Poisson arrivals, exponentially distributed service times,
+    and a first-come, first-served service assumption in its basic form. For a stable steady-state queue, the arrival
+    rate λ must be less than the service rate μ. Utilization is ρ=λ/μ. Under the model, the expected number in the
+    system is ρ/(1−ρ), and the expected time in the system is 1/(μ−λ). These results illustrate why delay grows
+    rapidly as utilization approaches one. The model is useful for intuition and approximate analysis, but real
+    network traffic may be bursty, correlated, shaped, priority-scheduled, multi-server, or affected by finite buffers
+    and packet-size variation. Therefore, it should not be used as an unquestioned prediction of a production network.
+    The handout explicitly lists the limits of M/M/1; students should identify which assumptions are plausible before
+    applying its equations and compare predictions with measured queue behavior.
+  formulas:
+  - id: mm1_rho
+    latex: \rho=\frac{\lambda}{\mu},\quad \lambda<\mu
+    vars:
+      \rho: server utilization
+      \lambda: arrival rate per second
+      \mu: service rate per second
+    example: For λ=800 packets/s and μ=1000 packets/s, ρ=0.8 and the model is stable.
+  - id: mm1_w
+    latex: W=\frac{1}{\mu-\lambda}
+    vars:
+      W: mean time in system in seconds
+      \mu: service rate per second
+      \lambda: arrival rate per second
+    example: For μ=1000/s and λ=800/s, W=1/200 s=0.005 s=5 ms.
+  viz:
+    type: queue_curve
+    description: Adjust arrival rate and observe m/m/1 queueing model and its limits as the selected network condition
+      changes.
+    params:
+    - name: arrival_rate
+      label: Arrival rate
+      min: 0
+      max: 1200
+      step: 10
+      default: 500
+      unit: packets/s
+    compute:
+      utilization: arrival_rate / 1000
+    outcomes:
+    - when: arrival_rate < 700
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: arrival_rate >= 700 && arrival_rate < 1000
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: arrival_rate >= 1000
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        arrival_rate: 500
+      lesson: Arrival rate is below service rate; the M/M/1 steady-state condition holds.
+    - set:
+        arrival_rate: 900
+      lesson: The model is stable but close to saturation, so predicted delay is high.
+    - set:
+        arrival_rate: 1100
+      lesson: Arrival rate exceeds service rate; no finite steady-state mean exists in the basic model.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of m/m/1 queueing model and its limits?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: For μ=1000 packets/s, calculate utilization and mean system time at λ=500, 900, and 1000 packets/s;
+    explain why λ=μ is not stable.
+- id: buffer-capacity-and-loss
+  code: CN-CO1.5.4
+  title: Buffer Capacity, Queue Growth, and Packet Loss
+  session: 3
+  skilling_exp: 3
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - queueing-delay-curve-knee
+  eli5: A buffer is like a waiting area. A bigger waiting area can hold more people, but it cannot make the cashier
+    work faster. If it fills up, new arrivals may be turned away.
+  key_points:
+  - A buffer stores packets waiting for service.
+  - A finite buffer drops packets when it is full and new packets arrive.
+  - Larger buffers can absorb longer bursts but may increase waiting time.
+  - Buffer size must be considered with link rate and acceptable delay.
+  deep_dive: A network buffer stores packets that are waiting for a transmission or processing resource. When arrivals
+    temporarily exceed service, the queue grows. If the buffer has finite capacity and remains full, arriving packets
+    may be dropped according to the queue's drop policy. Increasing buffer capacity can absorb a longer burst, but
+    it does not increase the service rate. A large persistent queue can create high delay, sometimes called bufferbloat,
+    even when packet loss is low. Buffer sizing is therefore a trade-off among burst tolerance, loss, memory use,
+    and latency. For a link with rate R, a buffer of B bits represents B/R seconds of serialization time at that
+    rate if it is fully occupied. The handout includes loss and buffers in the CO1 scope and asks students to examine
+    buffer behavior in the skilling experiment. Measure queue occupancy and delay together; a low drop count by
+    itself does not prove that the buffer is well sized.
+  formulas:
+  - id: buffer_time
+    latex: t_{buffer}=\frac{B}{R}
+    vars:
+      t_{buffer: time represented by a full buffer in seconds
+      B: buffer capacity in bits
+      R: link service rate in bits per second
+    example: A 1,000,000-bit buffer on a 100,000,000 bit/s link represents 0.01 s=10 ms when full.
+  viz:
+    type: queue_curve
+    description: Adjust buffer size and observe buffer capacity, queue growth, and packet loss as the selected network
+      condition changes.
+    params:
+    - name: buffer
+      label: Buffer size
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: MB
+    compute:
+      buffer_delay_ms: buffer * 8 / 100
+    outcomes:
+    - when: buffer <= 20
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: buffer > 20 && buffer <= 60
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: buffer > 60
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        buffer: 10
+      lesson: A 10 MB buffer represents a finite waiting-time budget; relate it to link rate.
+    - set:
+        buffer: 40
+      lesson: More burst storage can also allow a longer queue to form.
+    - set:
+        buffer: 90
+      lesson: A very large buffer can hide drops while producing excessive queueing delay.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of buffer capacity, queue growth, and packet loss?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: For a 100 Mb/s link, calculate the time represented by a full 1 MB and 10 MB buffer, using decimal
+    MB and converting bytes to bits.
+- id: queueing-measurement
+  code: CN-CO1.5.5
+  title: Experimental Queueing and Little's Law Validation
+  session: 3
+  skilling_exp: 3
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - littles-law
+  - buffer-capacity-and-loss
+  eli5: A science experiment changes one thing at a time and measures what happens. To study a packet queue, change
+    the offered traffic and record arrivals, waiting time, queue size, and drops.
+  key_points:
+  - Define the queue boundary and measurement interval.
+  - Measure arrival rate, service rate, occupancy, delay, and packet drops.
+  - Change offered load in controlled steps and retain repeatable conditions.
+  - Compare measured occupancy with Little's Law and explain deviations.
+  deep_dive: 'Queueing measurement turns the queueing model into a controlled experiment. First define the system
+    boundary: for example, the egress queue of one interface, rather than an entire path. Record the observation
+    interval, packet-counting method, offered load, service rate, queue occupancy, waiting-time distribution, and
+    drops. Increase offered load in steps while holding other variables as constant as possible. At each step, compare
+    the measured average number of packets with λW from Little''s Law, using arrival rate and time measured over
+    the same boundary. The queueing-delay curve should reveal whether delay rises gradually or develops a knee near
+    saturation. Capture both averages and tail percentiles because burst-related delays may disappear in a single
+    mean. The handout''s Experiment 3 explicitly combines queueing curve, Little''s Law, and buffer analysis, and
+    requires result analysis and viva. A defensible result includes the setup, units, raw observations, calculated
+    values, and limitations.'
+  formulas: []
+  viz:
+    type: queue_curve
+    description: Adjust offered load and observe experimental queueing and little's law validation as the selected
+      network condition changes.
+    params:
+    - name: offered_load
+      label: Offered load
+      min: 0
+      max: 1.2
+      step: 0.01
+      default: 0.5
+      unit: ratio
+    compute:
+      load_percent: offered_load * 100
+    outcomes:
+    - when: offered_load <= 0.7
+      title: Normal operating region
+      explain: The system remains within the intended operating range.
+      severity: info
+    - when: offered_load > 0.7 && offered_load <= 0.9
+      title: Warning region
+      explain: The system is approaching a limit; performance may become unstable.
+      severity: warn
+    - when: offered_load > 0.9
+      title: Failure region
+      explain: The system is beyond the safe operating range and the intended service may fail.
+      severity: fail
+    combos_to_try:
+    - set:
+        offered_load: 0.5
+      lesson: Record the low-load baseline and check Little's Law.
+    - set:
+        offered_load: 0.8
+      lesson: Repeat measurements near the queueing knee.
+    - set:
+        offered_load: 0.98
+      lesson: Observe queue growth, tail delay, and any drops near saturation.
+  common_mistakes:
+  - Confusing a measured value with a theoretical limit.
+  - Ignoring units or the observation interval.
+  quiz:
+  - q: What is the main purpose of experimental queueing and little's law validation?
+    options:
+    - To explain or measure the behavior described by this concept.
+    - To encrypt every packet automatically.
+    - To replace all network protocols.
+    - To guarantee zero delay.
+    answer: 0
+    why: The concept describes a network behavior or measurement; it does not provide encryption or eliminate physical
+      limits.
+  - q: Why should measurements include units and a defined observation interval?
+    options:
+    - So results can be interpreted and compared correctly.
+    - So packets become smaller.
+    - So propagation delay becomes zero.
+    - So every link has identical capacity.
+    answer: 0
+    why: A number without units or a measurement window can be misleading or incomparable.
+  - q: What is the safest way to interpret a result near a stated limit?
+    options:
+    - Treat it as a possible warning and investigate the operating conditions.
+    - Assume the network is perfect.
+    - Discard the measurement.
+    - Assume the result applies to every path.
+    answer: 0
+    why: Near-limit behavior can change sharply with load, traffic mix, and measurement conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  mini_task: Write an experiment table with offered load, measured λ, average W, average L, buffer occupancy, and
+    drops; compare L with λW.

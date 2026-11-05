@@ -1,0 +1,449 @@
+part:
+  id: co2-02
+  co: CO-2
+  title: Application Framing and HTTP/1.1
+  order: 2
+  concept_ids:
+  - co2-application-layer-framing
+  - co2-framing-errors
+  - co2-http11
+  - co2-http-round-trips
+concepts:
+- id: co2-application-layer-framing
+  code: CN-CO2.2.1
+  title: Application-layer framing
+  session: 6
+  skilling_exp: 5
+  btl: 2
+  difficulty: 1
+  prereqs: []
+  eli5: Framing tells the receiver where one application message ends and the next begins.
+  key_points:
+  - TCP supplies a byte stream rather than application messages.
+  - Applications need a framing rule to recover message boundaries.
+  - Common approaches include fixed-length records, length prefixes and delimiters.
+  - The receiver must handle headers and payloads arriving across multiple reads.
+  - Framing rules must define malformed, incomplete and oversized messages.
+  deep_dive: Application-layer framing converts an unstructured sequence of transport bytes into messages
+    that an application can parse. TCP preserves byte order, but it does not preserve the boundaries between
+    separate send() calls. A receiver may obtain part of a header, several complete messages, or a header
+    plus only part of a payload in one read. Therefore, code must maintain parser state across recv()
+    calls. A fixed-size record is simple when every message has the same size. A delimiter-based protocol
+    searches for a terminator and must define escaping or prohibit ambiguous delimiter content. A length-prefixed
+    protocol reads a fixed-format length field and then consumes exactly that many payload bytes. A robust
+    parser validates lengths before allocating memory and defines behaviour for incomplete, malformed
+    or oversized frames. The Socket Walkthrough, Backlog and HTTP Framing experiment should make these
+    boundary cases visible. One recv() call is an arbitrary chunk of the stream, not necessarily one complete
+    request.
+  formulas: []
+  viz:
+    type: bit_grid
+    description: Inspect the fraction of a framed message received so far.
+    params:
+    - name: received_bytes
+      label: Bytes received
+      min: 0
+      max: 4096
+      step: 1
+      default: 512
+      unit: bytes
+    - name: frame_bytes
+      label: Frame size
+      min: 1
+      max: 4096
+      step: 1
+      default: 1024
+      unit: bytes
+    compute:
+      remaining_bytes: max(0, frame_bytes - received_bytes)
+      completion_percent: min(100, 100 * received_bytes / frame_bytes)
+    outcomes:
+    - when: received_bytes < frame_bytes * 0.5
+      title: Partial frame
+      explain: Less than half of the illustrative frame has arrived.
+      severity: warn
+    - when: received_bytes >= frame_bytes * 0.5 && received_bytes < frame_bytes
+      title: Frame still incomplete
+      explain: More than half has arrived, but the parser must wait for the remainder.
+      severity: warn
+    - when: received_bytes >= frame_bytes
+      title: Frame complete
+      explain: The full declared frame is available for parsing.
+      severity: info
+    combos_to_try:
+    - set:
+        received_bytes: 100
+        frame_bytes: 1024
+      lesson: The receiver must retain partial data.
+    - set:
+        received_bytes: 800
+        frame_bytes: 1024
+      lesson: Most bytes have arrived, but parsing must still wait.
+    - set:
+        received_bytes: 1024
+        frame_bytes: 1024
+      lesson: The declared frame is complete.
+  common_mistakes:
+  - Assuming one recv() equals one message.
+  - Parsing a payload before its full declared length arrives.
+  - Trusting an unvalidated length field for memory allocation.
+  quiz:
+  - q: 'Why is framing needed over TCP? '
+    options:
+    - TCP discards bytes
+    - TCP does not preserve application message boundaries
+    - TCP reorders every message
+    - TCP only sends numbers
+    answer: 1
+    why: TCP exposes an ordered byte stream without application message boundaries.
+  - q: 'Which is a common framing strategy? '
+    options:
+    - Length prefix
+    - DNS TTL
+    - AIMD
+    - TIME_WAIT
+    answer: 0
+    why: A length prefix explicitly states the payload size.
+  - q: 'What should a receiver do when only part of a frame has arrived? '
+    options:
+    - Parse it as complete
+    - Discard the socket immediately
+    - Retain state and wait for more bytes
+    - Treat it as a DNS answer
+    answer: 2
+    why: The parser must handle partial arrivals across reads.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Implement a length-prefixed frame parser in C that survives a header split across two recv()
+    calls.
+- id: co2-framing-errors
+  code: CN-CO2.2.2
+  title: Message boundaries and framing errors
+  session: 6
+  skilling_exp: 5
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co2-application-layer-framing
+  eli5: Framing errors happen when the sender and receiver disagree about message length or boundaries.
+  key_points:
+  - A truncated frame ends before its declared payload length arrives.
+  - An invalid length can cause parser errors or unsafe allocation.
+  - Delimiter protocols must handle delimiters inside payloads.
+  - Multiple frames can arrive in one receive buffer.
+  - A parser should reject invalid input predictably and preserve valid following frames where possible.
+  deep_dive: 'Framing correctness is a protocol agreement between sender and receiver. Both sides must
+    interpret the header format, byte order, length units and boundary rule identically. A truncated frame
+    is not complete merely because the connection remains open; the parser must distinguish temporary
+    incompleteness from a terminal disconnect. A length value should be checked against protocol limits
+    before it is used to allocate memory or index a buffer. Delimiter-based framing needs a clear rule
+    for delimiter characters that occur within payload data, such as escaping or encoding. The opposite
+    case is also important: a single receive buffer may contain multiple complete frames and a fragment
+    of another. A parser that handles only one frame per read can leave bytes unprocessed or desynchronize.
+    Robust code uses explicit parser states and tests malformed, split and coalesced input. Validate declared
+    lengths and keep parser state; neither truncation nor coalescing is exceptional on a stream.'
+  formulas: []
+  viz:
+    type: custom
+    description: Vary the declared frame size and bytes received.
+    params:
+    - name: declared_bytes
+      label: Declared payload
+      min: 1
+      max: 8192
+      step: 1
+      default: 1024
+      unit: bytes
+    - name: actual_bytes
+      label: Available payload
+      min: 0
+      max: 8192
+      step: 1
+      default: 900
+      unit: bytes
+    compute:
+      length_delta: actual_bytes - declared_bytes
+    outcomes:
+    - when: actual_bytes < declared_bytes
+      title: Truncated frame
+      explain: The available payload is shorter than the declared length.
+      severity: fail
+    - when: actual_bytes == declared_bytes
+      title: Exact frame
+      explain: Available bytes match the declared payload length.
+      severity: info
+    - when: actual_bytes > declared_bytes
+      title: Extra bytes present
+      explain: The buffer contains bytes beyond this frame; parse subsequent frames rather than merging
+        them blindly.
+      severity: warn
+    combos_to_try:
+    - set:
+        declared_bytes: 1024
+        actual_bytes: 400
+      lesson: The frame is incomplete.
+    - set:
+        declared_bytes: 1024
+        actual_bytes: 1024
+      lesson: The frame boundary is exact.
+    - set:
+        declared_bytes: 1024
+        actual_bytes: 1500
+      lesson: The remaining bytes may begin another frame.
+  common_mistakes:
+  - Treating a partial frame as malformed immediately.
+  - Ignoring bytes after the first complete frame.
+  - Allocating directly from an untrusted length without a limit.
+  quiz:
+  - q: 'What does a truncated length-prefixed frame indicate? '
+    options:
+    - The complete payload arrived
+    - Fewer payload bytes arrived than declared
+    - The DNS server failed
+    - TCP reordered bytes
+    answer: 1
+    why: The declared length exceeds the available payload.
+  - q: 'A receive buffer contains two complete frames. What should the parser do? '
+    options:
+    - Parse only the first and discard the rest
+    - Parse both according to the framing rule
+    - Combine them into one frame
+    - Close every time
+    answer: 1
+    why: Multiple frames can be coalesced in one read.
+  - q: 'Why validate a length field? '
+    options:
+    - To change TCP ordering
+    - To prevent invalid sizes and unsafe memory use
+    - To remove HTTP headers
+    - To increase DNS TTL
+    answer: 1
+    why: Untrusted lengths must be bounded before use.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Test a parser with fragmented headers, truncated payloads, oversized lengths and two frames
+    in one buffer.
+- id: co2-http11
+  code: CN-CO2.2.3
+  title: HTTP/1.1 request–response communication
+  session: 6
+  skilling_exp: 5
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co2-application-layer-framing
+  eli5: HTTP/1.1 is an application protocol in which clients send requests and servers return responses.
+  key_points:
+  - An HTTP request contains a request line, headers and an optional body.
+  - An HTTP response contains a status line, headers and an optional body.
+  - CRLF separates protocol lines.
+  - Host identifies the target host in HTTP/1.1 requests.
+  - Content-Length and chunked transfer coding describe message-body framing.
+  deep_dive: 'HTTP/1.1 is an application-layer request–response protocol commonly carried over TCP. A
+    request begins with a method, target and version, followed by header fields and a blank line; a body
+    may follow. A response begins with a version and status code, then headers, a blank line and an optional
+    body. HTTP/1.1 uses CRLF line endings, and the Host header identifies the target host. Message-body
+    length must be determined correctly: Content-Length declares a body size, while chunked transfer coding
+    provides another framing mechanism. A server implementation must parse the request line and headers
+    without assuming they arrive in one read, validate required fields, and construct a correctly framed
+    response. Persistent connections mean that multiple request–response exchanges may share a TCP connection,
+    making correct framing and connection-state management essential. HTTP/1.1 parsing depends on exact
+    syntax and body framing; a TCP read is not an HTTP message.'
+  formulas: []
+  viz:
+    type: timeline
+    description: Estimate the time contribution of sequential HTTP round trips.
+    params:
+    - name: rtt_ms
+      label: Round-trip time
+      min: 1
+      max: 500
+      step: 1
+      default: 40
+      unit: ms
+    - name: round_trips
+      label: Sequential round trips
+      min: 1
+      max: 20
+      step: 1
+      default: 3
+      unit: count
+    compute:
+      round_trip_delay_ms: rtt_ms * round_trips
+    outcomes:
+    - when: round_trip_delay_ms <= 100
+      title: Low illustrative RTT contribution
+      explain: The sequential round-trip component is at most 100 ms.
+      severity: info
+    - when: round_trip_delay_ms > 100 && round_trip_delay_ms <= 500
+      title: Noticeable RTT contribution
+      explain: Sequential exchanges add a visible delay component.
+      severity: warn
+    - when: round_trip_delay_ms > 500
+      title: High RTT contribution
+      explain: Many sequential exchanges or a high RTT dominate the illustrative delay.
+      severity: fail
+    combos_to_try:
+    - set:
+        rtt_ms: 20
+        round_trips: 2
+      lesson: Two short exchanges contribute 40 ms.
+    - set:
+        rtt_ms: 80
+        round_trips: 3
+      lesson: Sequential request dependencies add up.
+    - set:
+        rtt_ms: 150
+        round_trips: 5
+      lesson: Reducing unnecessary sequential round trips becomes important.
+  common_mistakes:
+  - Ignoring the blank line between headers and body.
+  - Assuming Content-Length counts characters rather than bytes.
+  - Forgetting that persistent connections can carry multiple messages.
+  quiz:
+  - q: 'Which HTTP/1.1 header identifies the target host? '
+    options:
+    - Host
+    - Accept
+    - Server
+    - Connection-ID
+    answer: 0
+    why: Host identifies the target host in HTTP/1.1.
+  - q: 'What separates HTTP headers from the message body? '
+    options:
+    - A blank line
+    - A DNS query
+    - A TCP FIN
+    - A TLS alert
+    answer: 0
+    why: The header section ends with an empty line.
+  - q: 'Which fields can describe HTTP message-body framing? '
+    options:
+    - Content-Length and Transfer-Encoding
+    - Host and User-Agent only
+    - AIMD and RTO
+    - ALPN and ECN
+    answer: 0
+    why: Content-Length and transfer coding define body framing.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Build a minimal HTTP/1.1 server in C that parses a request and returns a correctly framed
+    response.
+- id: co2-http-round-trips
+  code: CN-CO2.2.4
+  title: HTTP round trips and request sequencing
+  session: 6
+  skilling_exp: 5
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co2-http11
+  eli5: Every sequential network exchange can add round-trip delay, so request dependencies matter.
+  key_points:
+  - A round trip is the time for a request or signal to reach a peer and a response to return.
+  - Sequential dependent requests accumulate round-trip delay.
+  - Connection setup and application exchanges can contribute separate round trips.
+  - Reducing unnecessary sequential exchanges can improve response time.
+  - Measured page-load time also includes processing, transfer and other delays.
+  deep_dive: Round-trip time is a useful way to reason about network interaction latency. If an application
+    must wait for one response before it can issue the next request, those exchanges are sequential and
+    their delays accumulate. A page load can involve DNS resolution, connection establishment, security
+    negotiation and HTTP exchanges; the exact sequence depends on the protocol and connection state. A
+    simple sum of round-trip times is only one component of observed page-load time, because server processing,
+    data transfer, local scheduling and other factors also contribute. The goal of the course analysis
+    is to identify avoidable sequential dependencies rather than to assume every page load has one fixed
+    number of round trips. Persistent connections and appropriate request organization can reduce repeated
+    setup costs, while measurements are needed to distinguish network delay from processing and transfer
+    time. Sequential dependencies add RTTs; page-load time is broader than RTT alone.
+  formulas: []
+  viz:
+    type: queue_curve
+    description: Compute the accumulated delay from sequential round trips.
+    params:
+    - name: rtt_ms
+      label: RTT
+      min: 1
+      max: 1000
+      step: 1
+      default: 50
+      unit: ms
+    - name: count
+      label: Sequential exchanges
+      min: 1
+      max: 20
+      step: 1
+      default: 4
+      unit: count
+    compute:
+      total_ms: rtt_ms * count
+    outcomes:
+    - when: total_ms <= 100
+      title: Small accumulated delay
+      explain: The sequential RTT contribution is at most 100 ms.
+      severity: info
+    - when: total_ms > 100 && total_ms <= 500
+      title: Moderate accumulated delay
+      explain: The sequence contributes a noticeable delay.
+      severity: warn
+    - when: total_ms > 500
+      title: Large accumulated delay
+      explain: Sequential network dependencies dominate this illustrative component.
+      severity: fail
+    combos_to_try:
+    - set:
+        rtt_ms: 20
+        count: 3
+      lesson: Three exchanges contribute 60 ms.
+    - set:
+        rtt_ms: 80
+        count: 4
+      lesson: Sequential waits accumulate to 320 ms.
+    - set:
+        rtt_ms: 200
+        count: 5
+      lesson: A high RTT multiplied by many dependencies is costly.
+  common_mistakes:
+  - Calling RTT the entire page-load time.
+  - Adding exchanges that can actually happen in parallel.
+  - Ignoring server processing and transfer time.
+  quiz:
+  - q: 'What happens when four requests each require a sequential 50 ms RTT? '
+    options:
+    - 200 ms RTT contribution
+    - 50 ms total
+    - 4 ms total
+    - No delay
+    answer: 0
+    why: Four sequential 50 ms waits contribute 200 ms.
+  - q: 'Does RTT include all server processing and page rendering? '
+    options:
+    - Always
+    - 'No'
+    - Only with UDP
+    - Only with DNS
+    answer: 1
+    why: RTT is a network timing measure, not the entire page-load duration.
+  - q: 'What is the main benefit of reducing sequential dependencies? '
+    options:
+    - Fewer accumulated waits
+    - Larger TCP headers
+    - More DNS records
+    - Longer TIME_WAIT
+    answer: 0
+    why: Avoiding sequential exchanges reduces accumulated round-trip delay.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Draw the request sequence for a simple page load and mark which exchanges are sequential
+    and which can overlap.

@@ -1,0 +1,347 @@
+part:
+  id: co5_05
+  co: CO-5
+  title: Rate Limiting and TLS Security
+  order: 5
+  concept_ids:
+  - co5-token-bucket
+  - co5-tls-termination
+  - co5-tls-failure-diagnosis
+concepts:
+- id: co5-token-bucket
+  code: CN-CO5.05.1
+  title: Token-Bucket Rate Limiting
+  session: 19
+  skilling_exp: 22
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co5-vpn-mtu
+  eli5: A token bucket controls how quickly traffic may be sent. Tokens accumulate at a configured rate up to a
+    limit, and packets consume tokens when transmitted.
+  key_points:
+  - The token generation rate controls the long-term permitted rate.
+  - Bucket depth controls how much burst traffic can be sent immediately.
+  - A packet can be sent when enough tokens are available.
+  - A token bucket permits bursts while enforcing a long-term average rate.
+  - Policing may drop or mark excess traffic; shaping may queue it for later transmission.
+  deep_dive: 'Token-Bucket Rate Limiting belongs to Rate Limiting and TLS Security in CO-5, which focuses on evaluating
+    and operating the network that has already been built. The aim is to turn an operational symptom into a defensible
+    conclusion supported by repeatable evidence. Start by defining the service behaviour that is failing, the affected
+    scope and the time interval. State a hypothesis that predicts an observable result, then select a test that
+    can distinguish it from competing explanations. Collect evidence from relevant endpoints and intermediate systems,
+    including counters, logs, traces, packet observations and configuration state. The formula included with this
+    concept is a compact model: identify every variable, preserve units, state assumptions and explain the limits
+    of the result. The visualization is a learning aid rather than a complete implementation of a vendor device
+    or production control plane. For a real change, estimate the blast radius, make one controlled adjustment, retain
+    a rollback path and repeat the original test. Verification should demonstrate service restoration and check
+    for regressions, not merely confirm that a command returned successfully. Document the hypothesis, test, evidence,
+    change and outcome so another engineer can reproduce the reasoning. This disciplined process reduces guesswork
+    and makes network operations safer, faster and easier to audit.'
+  formulas:
+  - id: co5-token-bucket-formula
+    latex: T(t)=min(B,T0+r*t)-S
+    vars: 'T: tokens remaining; B: bucket depth; T0: starting tokens; r: token rate; t: elapsed time; S: tokens
+      spent'
+    example: With a 10,000-byte bucket, 1,000 bytes/s refill and 2,000 bytes spent after one second from a full
+      bucket, 9,000 tokens remain.
+  viz:
+    type: token_bucket
+    description: Explore the operational relationship behind token-bucket rate limiting using controlled input values;
+      compare the simplified result with measured system behaviour.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified learning model.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying operational condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Establish a baseline with Input A twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed result.
+  common_mistakes:
+  - Confusing token rate with bucket depth.
+  - Assuming a token bucket eliminates bursts.
+  - Treating policing and shaping as identical actions.
+  quiz:
+  - q: What is the central purpose of Token-Bucket Rate Limiting?
+    options:
+    - Apply or analyze token-bucket rate limiting in network operations
+    - Encrypt all application traffic
+    - Replace routing protocols
+    - Guarantee that no network fault can occur
+    answer: 0
+    why: The concept supports the specific operational capability named in the question.
+  - q: Which practice best supports reliable fault resolution?
+    options:
+    - Make several changes before measuring
+    - Use a falsifiable hypothesis, controlled test and recorded evidence
+    - Assume a green dashboard proves every user path works
+    - Skip verification after a configuration change
+    answer: 1
+    why: A testable hypothesis and evidence-based workflow distinguish causes and validate the fix.
+  - q: What should happen after a risky network change?
+    options:
+    - Delete the previous configuration immediately
+    - Assume success if the command completed
+    - Verify service behaviour and retain a rollback path
+    - Avoid documenting the change
+    answer: 2
+    why: Operational success requires service-level verification and a safe recovery option.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Create a small practical exercise for token-bucket rate limiting. State the expected behaviour, collect
+    evidence, make one controlled change if needed, and record verification and rollback considerations.
+- id: co5-tls-termination
+  code: CN-CO5.05.2
+  title: TLS Termination and Certificate Validation
+  session: 19
+  skilling_exp: 22
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co5-zero-trust-identity
+  eli5: TLS termination is where an encrypted connection is ended and decrypted traffic is handled by a service
+    or proxy. The certificate must prove the expected server identity and chain of trust.
+  key_points:
+  - TLS termination may occur at a load balancer, reverse proxy or application server.
+  - Certificate validation checks trust chain, validity period and requested server name.
+  - An expired certificate must be rejected unless an explicitly defined trust policy says otherwise.
+  - A certificate for the wrong hostname does not authenticate the requested service.
+  - TLS 1.3 negotiation and ALPN selection affect protocol interoperability.
+  deep_dive: 'TLS Termination and Certificate Validation belongs to Rate Limiting and TLS Security in CO-5, which
+    focuses on evaluating and operating the network that has already been built. The aim is to turn an operational
+    symptom into a defensible conclusion supported by repeatable evidence. Start by defining the service behaviour
+    that is failing, the affected scope and the time interval. State a hypothesis that predicts an observable result,
+    then select a test that can distinguish it from competing explanations. Collect evidence from relevant endpoints
+    and intermediate systems, including counters, logs, traces, packet observations and configuration state. The
+    formula included with this concept is a compact model: identify every variable, preserve units, state assumptions
+    and explain the limits of the result. The visualization is a learning aid rather than a complete implementation
+    of a vendor device or production control plane. For a real change, estimate the blast radius, make one controlled
+    adjustment, retain a rollback path and repeat the original test. Verification should demonstrate service restoration
+    and check for regressions, not merely confirm that a command returned successfully. Document the hypothesis,
+    test, evidence, change and outcome so another engineer can reproduce the reasoning. This disciplined process
+    reduces guesswork and makes network operations safer, faster and easier to audit.'
+  formulas:
+  - id: co5-tls-termination-formula
+    latex: Valid = chain_ok AND time_ok AND name_ok
+    vars: 'chain_ok: trusted chain; time_ok: within validity; name_ok: hostname matches'
+    example: A trusted certificate that expired yesterday fails time validation even if its hostname matches.
+  viz:
+    type: state_machine
+    description: Explore the operational relationship behind tls termination and certificate validation using controlled
+      input values; compare the simplified result with measured system behaviour.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified learning model.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying operational condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Establish a baseline with Input A twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed result.
+  common_mistakes:
+  - Checking only whether a certificate file exists.
+  - Accepting an expired or wrong-name certificate.
+  - Confusing encryption with successful peer identity validation.
+  quiz:
+  - q: What is the central purpose of TLS Termination and Certificate Validation?
+    options:
+    - Apply or analyze tls termination and certificate validation in network operations
+    - Encrypt all application traffic
+    - Replace routing protocols
+    - Guarantee that no network fault can occur
+    answer: 0
+    why: The concept supports the specific operational capability named in the question.
+  - q: Which practice best supports reliable fault resolution?
+    options:
+    - Make several changes before measuring
+    - Use a falsifiable hypothesis, controlled test and recorded evidence
+    - Assume a green dashboard proves every user path works
+    - Skip verification after a configuration change
+    answer: 1
+    why: A testable hypothesis and evidence-based workflow distinguish causes and validate the fix.
+  - q: What should happen after a risky network change?
+    options:
+    - Delete the previous configuration immediately
+    - Assume success if the command completed
+    - Verify service behaviour and retain a rollback path
+    - Avoid documenting the change
+    answer: 2
+    why: Operational success requires service-level verification and a safe recovery option.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Create a small practical exercise for tls termination and certificate validation. State the expected
+    behaviour, collect evidence, make one controlled change if needed, and record verification and rollback considerations.
+- id: co5-tls-failure-diagnosis
+  code: CN-CO5.05.3
+  title: Diagnosing TLS Certificate and Interoperability Failures
+  session: 19
+  skilling_exp: 22
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co5-tls-termination
+  eli5: TLS failures can happen before application data is exchanged. Diagnose them by checking the client name,
+    certificate chain, validity dates, negotiated protocol and ALPN result.
+  key_points:
+  - Capture the exact hostname used by the client and compare it with certificate names.
+  - Inspect certificate chain completeness and trust anchors.
+  - Check system time because validity checks depend on accurate clocks.
+  - Review TLS version and cipher compatibility without weakening validation unnecessarily.
+  - Verify that the terminated connection and upstream connection have the intended security properties.
+  deep_dive: 'Diagnosing TLS Certificate and Interoperability Failures belongs to Rate Limiting and TLS Security
+    in CO-5, which focuses on evaluating and operating the network that has already been built. The aim is to turn
+    an operational symptom into a defensible conclusion supported by repeatable evidence. Start by defining the
+    service behaviour that is failing, the affected scope and the time interval. State a hypothesis that predicts
+    an observable result, then select a test that can distinguish it from competing explanations. Collect evidence
+    from relevant endpoints and intermediate systems, including counters, logs, traces, packet observations and
+    configuration state. The formula included with this concept is a compact model: identify every variable, preserve
+    units, state assumptions and explain the limits of the result. The visualization is a learning aid rather than
+    a complete implementation of a vendor device or production control plane. For a real change, estimate the blast
+    radius, make one controlled adjustment, retain a rollback path and repeat the original test. Verification should
+    demonstrate service restoration and check for regressions, not merely confirm that a command returned successfully.
+    Document the hypothesis, test, evidence, change and outcome so another engineer can reproduce the reasoning.
+    This disciplined process reduces guesswork and makes network operations safer, faster and easier to audit.'
+  formulas:
+  - id: co5-tls-failure-diagnosis-formula
+    latex: Handshake_success = certificate_ok AND negotiation_ok
+    vars: 'certificate_ok: peer identity validation; negotiation_ok: compatible TLS negotiation'
+    example: A valid certificate does not guarantee a successful handshake if client and server cannot agree on
+      supported TLS parameters.
+  viz:
+    type: timeline
+    description: Explore the operational relationship behind diagnosing tls certificate and interoperability failures
+      using controlled input values; compare the simplified result with measured system behaviour.
+    params:
+    - name: input_a
+      label: Input A
+      min: 1
+      max: 100
+      step: 1
+      default: 20
+      unit: units
+    - name: input_b
+      label: Input B
+      min: 1
+      max: 100
+      step: 1
+      default: 10
+      unit: units
+    compute:
+      difference: input_a - input_b
+      ratio: input_a / input_b
+    outcomes:
+    - when: input_a >= input_b
+      title: Input A meets or exceeds Input B
+      explain: The selected values satisfy this comparison in the simplified learning model.
+      severity: info
+    - when: input_a < input_b
+      title: Input A is below Input B
+      explain: The selected values fall below the comparison threshold; investigate the underlying operational condition.
+      severity: warn
+    combos_to_try:
+    - set:
+        input_a: 20
+        input_b: 10
+      lesson: Establish a baseline with Input A twice Input B.
+    - set:
+        input_a: 8
+        input_b: 16
+      lesson: Reverse the relationship and explain the changed result.
+  common_mistakes:
+  - Disabling certificate checks to make a test pass.
+  - Ignoring clock skew and incomplete certificate chains.
+  - Assuming successful TLS termination means upstream traffic is also protected.
+  quiz:
+  - q: What is the central purpose of Diagnosing TLS Certificate and Interoperability Failures?
+    options:
+    - Apply or analyze diagnosing tls certificate and interoperability failures in network operations
+    - Encrypt all application traffic
+    - Replace routing protocols
+    - Guarantee that no network fault can occur
+    answer: 0
+    why: The concept supports the specific operational capability named in the question.
+  - q: Which practice best supports reliable fault resolution?
+    options:
+    - Make several changes before measuring
+    - Use a falsifiable hypothesis, controlled test and recorded evidence
+    - Assume a green dashboard proves every user path works
+    - Skip verification after a configuration change
+    answer: 1
+    why: A testable hypothesis and evidence-based workflow distinguish causes and validate the fix.
+  - q: What should happen after a risky network change?
+    options:
+    - Delete the previous configuration immediately
+    - Assume success if the command completed
+    - Verify service behaviour and retain a rollback path
+    - Avoid documenting the change
+    answer: 2
+    why: Operational success requires service-level verification and a safe recovery option.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Create a small practical exercise for diagnosing tls certificate and interoperability failures. State
+    the expected behaviour, collect evidence, make one controlled change if needed, and record verification and
+    rollback considerations.

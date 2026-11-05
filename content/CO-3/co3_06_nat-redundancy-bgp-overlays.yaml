@@ -1,0 +1,332 @@
+part:
+  id: co3_06
+  co: CO-3
+  title: NAT, First-Hop Redundancy, BGP and Overlays
+  order: 6
+  concept_ids:
+  - co3-nat
+  - co3-first-hop-redundancy
+  - co3-bgp-overlays-mtu
+concepts:
+- id: co3-nat
+  code: CN-CO3.6.1
+  title: Network Address Translation (NAT)
+  session: 12
+  skilling_exp: 16
+  btl: 3
+  difficulty: 2
+  prereqs:
+  - co3-ipv4-prefix-subnetting
+  - co3-route-selection
+  eli5: NAT changes address information as packets cross a network boundary, commonly allowing private IPv4 hosts
+    to share public addressing.
+  key_points:
+  - Static NAT maps a private address to a fixed external address.
+  - Dynamic NAT selects an external address from a configured pool.
+  - PAT/NAT overload allows multiple internal flows to share an external address using transport identifiers.
+  - NAT changes packet headers and maintains translation state for return traffic.
+  - Troubleshooting must inspect translations, routing and policy rather than treating NAT as routing itself.
+  deep_dive: 'Network Address Translation modifies IP address information as packets pass through a translation
+    device. Static NAT provides a stable mapping between an internal and external address. Dynamic NAT allocates
+    an external address from a pool. Port Address Translation, often called NAT overload, allows many internal clients
+    to share one external IPv4 address by distinguishing flows with transport-layer port information. The translation
+    device maintains state so that return traffic can be mapped back to the correct internal endpoint. NAT is not
+    a routing protocol: the router still needs a valid route to the destination and a working return path. A useful
+    troubleshooting sequence checks whether the packet reaches the NAT device, whether the translation rule matches,
+    whether a translation entry is created, and whether the translated packet can reach the upstream network. Then
+    verify that return traffic matches the state entry and that filtering policy permits the flow. The handout''s
+    experiment combines NAT configuration with convergence and overlay MTU diagnosis, so NAT should be tested as
+    one component in the end-to-end path.'
+  formulas:
+  - id: nat_mapping
+    latex: (inside\ address,port)\leftrightarrow(outside\ address,port)
+    vars:
+      inside: internal endpoint
+      outside: translated external endpoint
+    example: 192.168.1.10:50000 may translate to 203.0.113.5:40001 for one flow.
+  viz:
+    type: packet_flow
+    description: Illustrate how multiple internal endpoints can share one external IPv4 address using distinct ports.
+    params:
+    - name: internal_flows
+      label: Concurrent internal flows
+      min: 1
+      max: 60000
+      step: 100
+      default: 1000
+      unit: flows
+    compute:
+      flows_per_external_ip: internal_flows
+    outcomes:
+    - when: internal_flows <= 1000
+      title: Small translation workload
+      explain: A modest number of flows is used in this illustrative example.
+      severity: info
+    - when: internal_flows > 1000 && internal_flows <= 30000
+      title: Growing translation state
+      explain: Monitor translation-table capacity, port allocation and timeout behaviour.
+      severity: info
+    - when: internal_flows > 30000
+      title: Large translation workload
+      explain: Validate available ports, table capacity and device performance under peak concurrency.
+      severity: warn
+    combos_to_try:
+    - set:
+        internal_flows: 100
+      lesson: A small flow count creates a smaller translation-state workload.
+    - set:
+        internal_flows: 5000
+      lesson: PAT distinguishes simultaneous flows using transport identifiers.
+    - set:
+        internal_flows: 50000
+      lesson: Large concurrent flow counts require capacity and timeout planning.
+  common_mistakes:
+  - Treating NAT as a substitute for a route.
+  - Assuming all NAT types use port translation.
+  - Ignoring translation state and return-path filtering.
+  quiz:
+  - q: What does PAT commonly use to distinguish simultaneous flows?
+    options:
+    - Transport-layer port numbers
+    - DNS zone names
+    - OSPF area IDs
+    - Ethernet VLAN names
+    answer: 0
+    why: PAT can share an external address by translating transport ports.
+  - q: Does NAT automatically provide a route to the destination?
+    options:
+    - No; routing is still required
+    - Yes, NAT replaces all routing
+    - Only when DNS is disabled
+    - Only for IPv6
+    answer: 0
+    why: Translation and routing are separate functions.
+  - q: What should be inspected when return traffic fails through PAT?
+    options:
+    - Translation state and return-path policy
+    - Only the client's hostname
+    - The subnet mask of an unrelated VLAN
+    - The OSPF router ID format
+    answer: 0
+    why: The device must have a matching translation state and a permitted return path.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Configure a PAT rule for an internal subnet, generate multiple client flows, inspect the translation
+    table and verify return traffic.
+- id: co3-first-hop-redundancy
+  code: CN-CO3.6.2
+  title: First-Hop Redundancy
+  session: 12
+  skilling_exp: 16
+  btl: 4
+  difficulty: 3
+  prereqs:
+  - co3-route-failover-dual-uplink
+  eli5: First-hop redundancy lets hosts keep using a virtual default gateway even if one gateway router fails.
+  key_points:
+  - Hosts normally configure a default gateway for off-subnet traffic.
+  - A first-hop redundancy protocol presents a virtual gateway address shared by multiple routers.
+  - One router forwards as the active gateway while another can take over.
+  - Failover depends on device health, protocol timers and tracking configuration.
+  - Test gateway failure separately from upstream-uplink failure.
+  deep_dive: 'First-hop redundancy protects the default-gateway function for hosts on a LAN. Without it, hosts configured
+    with one router''s physical address may lose off-subnet connectivity if that router fails. A first-hop redundancy
+    protocol provides a virtual IP address and, commonly, a virtual MAC address that hosts use as their gateway.
+    One router is active and forwards traffic while another is ready to take over. If the active router or a tracked
+    path fails, the standby can assume the virtual gateway role. This mechanism is distinct from upstream routing
+    redundancy: a gateway can remain alive while its WAN path is broken, so tracking and coordination with route
+    state may be necessary. Test both failure types independently. Confirm that hosts retain the same configured
+    gateway, that the virtual role moves as expected, and that traffic reaches external destinations after takeover.
+    The handout lists first-hop redundancy alongside NAT, BGP and dual uplinks because resilient campus design must
+    protect both the local gateway and the upstream path.'
+  formulas:
+  - id: gateway_takeover
+    latex: T_{takeover}=T_{detect}+T_{role\ change}
+    vars:
+      T_takeover: time until the standby assumes gateway service
+      T_detect: failure detection time
+      T_role change: role transition time
+    example: If detection takes 2 s and role change takes 0.5 s, takeover is 2.5 s.
+  viz:
+    type: timeline
+    description: Estimate first-hop gateway takeover time from detection and role-change components.
+    params:
+    - name: takeover_seconds
+      label: Gateway takeover time
+      min: 0
+      max: 20
+      step: 0.5
+      default: 2.5
+      unit: seconds
+    compute:
+      within_five: takeover_seconds < 5
+    outcomes:
+    - when: takeover_seconds < 5
+      title: Fast gateway takeover
+      explain: The illustrative takeover is below five seconds; verify actual host traffic and upstream reachability.
+      severity: info
+    - when: takeover_seconds >= 5 && takeover_seconds <= 10
+      title: Slow gateway takeover
+      explain: Inspect detection, tracking and role-transition timers.
+      severity: warn
+    - when: takeover_seconds > 10
+      title: Long gateway interruption
+      explain: A long takeover can cause noticeable service disruption; investigate protocol and health tracking.
+      severity: fail
+    combos_to_try:
+    - set:
+        takeover_seconds: 1.5
+      lesson: A short takeover still needs end-to-end verification.
+    - set:
+        takeover_seconds: 5
+      lesson: At five seconds, inspect whether the application tolerates the interruption.
+    - set:
+        takeover_seconds: 12
+      lesson: A long takeover indicates poor failover behaviour.
+  common_mistakes:
+  - Confusing first-hop redundancy with BGP or OSPF upstream path selection.
+  - Testing router power failure but not upstream path failure.
+  - Assuming a virtual gateway guarantees internet reachability.
+  quiz:
+  - q: What does a first-hop redundancy protocol protect?
+    options:
+    - The host's default-gateway availability
+    - DNS record replication
+    - TCP retransmission timers
+    - Ethernet CRC calculation
+    answer: 0
+    why: It provides a resilient virtual default gateway.
+  - q: What address do hosts commonly use with a virtual gateway design?
+    options:
+    - The virtual gateway IP
+    - Every router's physical IP simultaneously
+    - The remote server's public IP
+    - The DHCP server's MAC address
+    answer: 0
+    why: Hosts use the shared virtual gateway address.
+  - q: Why test upstream failure separately from gateway failure?
+    options:
+    - The gateway can remain active while its upstream path is broken
+    - They are always the same event
+    - First-hop redundancy disables routing
+    - DNS cannot work with redundant gateways
+    answer: 0
+    why: Gateway health and upstream reachability are distinct failure conditions.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Configure a virtual default gateway with two routers. Test active-router failure and tracked upstream-path
+    failure, recording takeover time and packet loss.
+- id: co3-bgp-overlays-mtu
+  code: CN-CO3.6.3
+  title: BGP, Network Overlays and MTU Constraints
+  session: 12
+  skilling_exp: 16
+  btl: 5
+  difficulty: 3
+  prereqs:
+  - co3-route-selection
+  - co3-nat
+  eli5: BGP exchanges routes between autonomous systems. An overlay builds a logical network over another network,
+    but extra headers reduce the space left for the inner packet.
+  key_points:
+  - BGP is a path-vector routing protocol used to exchange reachability between autonomous systems.
+  - BGP policy and path attributes influence route selection.
+  - An overlay encapsulates an inner packet inside an outer packet for transport across an underlay.
+  - Encapsulation adds header overhead and reduces the effective inner MTU when the underlay MTU is fixed.
+  - MTU mismatch can cause fragmentation, packet loss or connections that appear partially functional.
+  deep_dive: BGP is used to exchange routing information between autonomous systems and applies policy to select
+    and advertise paths. Unlike an interior link-state protocol, BGP decisions can depend on path attributes and
+    administrative policy, not simply the shortest physical path. Network overlays create logical connectivity by
+    encapsulating an inner packet inside an outer packet that travels through an underlay. The outer headers consume
+    part of the available frame or IP packet size. If the underlay MTU is fixed, the maximum inner packet must be
+    reduced by the encapsulation overhead or the network must support a suitable larger MTU. Otherwise, oversized
+    packets may be fragmented where permitted, dropped when fragmentation is not possible, or fail in ways that
+    affect some applications more than others. The handout specifically asks learners to analyse overlay MTU constraints
+    and diagnose similar connectivity symptoms. A reliable test compares the configured MTU, encapsulation overhead,
+    path MTU and packet sizes in both directions.
+  formulas:
+  - id: overlay_inner_mtu
+    latex: MTU_{inner}=MTU_{underlay}-H_{encap}
+    vars:
+      MTU_inner: maximum inner packet size
+      MTU_underlay: underlay MTU
+      H_encap: encapsulation header overhead
+    example: With a 1500-byte underlay MTU and 50-byte overhead, inner MTU is 1450 bytes.
+  viz:
+    type: bit_grid
+    description: Adjust encapsulation overhead to see the remaining inner MTU.
+    params:
+    - name: overhead_bytes
+      label: Encapsulation overhead
+      min: 0
+      max: 200
+      step: 5
+      default: 50
+      unit: bytes
+    compute:
+      inner_mtu: 1500-overhead_bytes
+    outcomes:
+    - when: overhead_bytes <= 40
+      title: Small encapsulation overhead
+      explain: Most of the 1500-byte underlay MTU remains available to the inner packet.
+      severity: info
+    - when: overhead_bytes > 40 && overhead_bytes <= 100
+      title: Moderate encapsulation overhead
+      explain: The inner MTU is reduced; ensure endpoints and path MTU discovery handle it.
+      severity: warn
+    - when: overhead_bytes > 100
+      title: Large encapsulation overhead
+      explain: A substantial part of the underlay MTU is consumed; validate fragmentation and packet-size behaviour.
+      severity: fail
+    combos_to_try:
+    - set:
+        overhead_bytes: 20
+      lesson: Inner MTU is 1480 bytes.
+    - set:
+        overhead_bytes: 50
+      lesson: Inner MTU is 1450 bytes.
+    - set:
+        overhead_bytes: 120
+      lesson: Inner MTU is 1380 bytes.
+  common_mistakes:
+  - Assuming the overlay has the same MTU as the underlay.
+  - Ignoring outer-header overhead when calculating the inner MTU.
+  - Treating BGP as a link-state protocol or assuming it selects only by hop count.
+  quiz:
+  - q: What is BGP primarily used for?
+    options:
+    - Exchanging reachability between autonomous systems
+    - Resolving IPv4 addresses to MAC addresses
+    - Assigning DHCP leases
+    - Calculating Ethernet CRC
+    answer: 0
+    why: BGP is an inter-domain path-vector routing protocol.
+  - q: An overlay adds 50 bytes of headers over a 1500-byte underlay MTU. What is the inner MTU?
+    options:
+    - 1450 bytes
+    - 1500 bytes
+    - 1550 bytes
+    - 750 bytes
+    answer: 0
+    why: 1500 minus 50 bytes of encapsulation overhead equals 1450 bytes.
+  - q: What can an MTU mismatch cause?
+    options:
+    - Large packets to fail while smaller packets may work
+    - All DNS records to disappear
+    - The router to change its MAC address
+    - BGP to become a distance-vector protocol
+    answer: 0
+    why: MTU problems can produce partial connectivity and packet-size-dependent failures.
+  exam_tags:
+  - mid-term
+  - end-sem
+  - skill-exam
+  - project
+  mini_task: Explain BGP path selection at a high level, then calculate the inner MTU for an overlay with a 1500-byte
+    underlay and at least two different encapsulation overheads. Propose a packet-size test.

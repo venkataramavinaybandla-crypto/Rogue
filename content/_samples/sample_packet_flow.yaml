@@ -1,0 +1,32 @@
+part:
+  id: sample-part-02
+  co: CO-1
+  title: Sample Multi-Hop Packet Flow Test
+  order: 101
+  concept_ids:
+    - packet_flow-sample-test
+concepts:
+  - id: packet_flow-sample-test
+    code: "TEST-PACKET_FLOW"
+    title: "Multi-Hop Packet Flow Test"
+    session: 1
+    skilling_exp: 1
+    btl: 3
+    difficulty: 2
+    prereqs: []
+    eli5: "Interactive verification suite for packet_flow visualizer in Rogue telemetry system."
+    key_points:
+      - "Driven strictly by params, values, outputs, outcomes contract."
+      - "Features live bidirectional interaction and animation."
+    deep_dive: "Detailed operational verification of packet_flow component under Rogue dashboard engine."
+    formulas: []
+    viz:
+      type: "packet_flow"
+      description: "Sample test suite for packet_flow"
+      params: [{"name":"layers","label":"Protocol Layers","min":1,"max":5,"step":1,"default":3,"unit":"layers"},{"name":"hops","label":"Network Hops","min":2,"max":4,"step":1,"default":3,"unit":"hops"}]
+      compute: {"total_headers":"layers * 20"}
+      outcomes: [{"when":"layers >= 4","title":"Heavy Header Overhead","explain":"Headers exceed payload efficiency.","severity":"warn"},{"when":"layers < 4","title":"Optimal Framing","explain":"Good payload-to-header ratio.","severity":"info"}]
+      combos_to_try: [{"set":{"layers":5,"hops":4},"lesson":"Maximum encapsulation with 4 hops."}]
+    common_mistakes: []
+    quiz: []
+    exam_tags: ["diagnostic", "sample"]
